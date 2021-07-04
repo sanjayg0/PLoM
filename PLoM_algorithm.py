@@ -11,7 +11,7 @@
 import numpy as np
 import random
 from math import pi, sqrt
-import PLoM_library_ubuntu as plom
+import PLoM_library as plom
 import matplotlib.pyplot as plt
 #export DISPLAY=localhost:0.0
 from ctypes import *

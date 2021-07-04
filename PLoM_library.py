@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+#JGA
 from matplotlib import pyplot as plt
 import numpy as np
 from scipy import integrate
@@ -26,9 +27,6 @@ def scaling(x):
             alpha[i] = x_max_k - x_min_k
         else:
             alpha[i] = 1
-    #print(x_min)
-    #print(x-x_min)
-    #print(np.diag(1/alpha))
     x_scaled = np.diag(1/alpha).dot(x-x_min)
     return x_scaled, alpha, x_min
 
@@ -87,6 +85,14 @@ def g(K, b):
     g = np.multiply(g, sqrt_norm)
     return g, eigenvalues
 
+def D_x_g_c(x):
+    #dependo on g(x)
+    D = np.zeros((20,2))#np.zeros((20,2))
+    D[0,0] = 1
+    D[0,1] = 2*x[0,0]
+    # D[0,1] = 2*x[0,0]
+    return D#np.array([[1, 2*x[0,0]],[0, 0]])
+
 def m(eigenvalues):
     """
     >>> m(np.array([1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.05, 0.025]))
@@ -129,7 +135,7 @@ def covariance(x):
     for i in range(0,N):
         C = C + (np.resize(x[:,i], x_mean.shape) - x_mean).dot(np.transpose((np.resize(x[:,i], x_mean.shape) - x_mean)))
         # C = C + (np.transpose(x[:,i]-np.transpose(x_mean))).dot((x[:, i]-np.transpose(x_mean)))
-    return C/(N-1) #papa recuperate porfavor señor ayudale
+    return C/(N-1)
 
 def PCA(x, tol):
     """
@@ -220,10 +226,7 @@ def gradient_gamma(b_c, eta_lambda, g_c, phi, mu, psi, x_mean):
 
 def hessian_gamma(eta_lambda, psi, g_c, phi, mu, x_mean):
     return covariance(h_c(eta_lambda, g_c, phi, mu, psi, x_mean))
-    # return (h_c(eta_lambda, g_c, phi, mu, psi, x_mean).\
-    #     dot(np.transpose(h_c(eta_lambda, g_c, phi, mu, psi, x_mean)))/eta_lambda.shape[1]) \
-    #     - (mean(h_c(eta_lambda, g_c, phi, mu, psi, x_mean)).\
-    #     dot(np.transpose(mean(h_c(eta_lambda, g_c, phi, mu, psi, x_mean)))))
+
 
 def generator(z_init, y_init, a, n_mc, x_mean, eta, s_v, hat_s_v, mu, phi, g, psi = 0, lambda_i = 0, g_c = 0):
     delta_t = 2*pi*hat_s_v/20
@@ -247,57 +250,27 @@ def generator(z_init, y_init, a, n_mc, x_mean, eta, s_v, hat_s_v, mu, phi, g, ps
         z_l_half = z_l + delta_t*0.5*y_l
         w_l_1 = np.random.normal(scale = sqrt(delta_t), size = (nu,N)).dot(a) #wiener process
         L_l_half = L(z_l_half.dot(np.transpose(g)), g_c, x_mean, eta, s_v, hat_s_v, mu, phi, psi, lambda_i).dot(a)
-        # plt.plot(z_l_half.dot(np.transpose(g))[0], z_l_half.dot(np.transpose(g))[1], 'ro')
-        # plt.show()
         y_l_1 = (1-beta)*y_l/(1+beta) + delta_t*(L_l_half)/(1+beta) + sqrt(f_0)*w_l_1/(1+beta)
         z_l = z_l_half + delta_t*0.5*y_l_1
         y_l = y_l_1
-    # time_z = 0
-    # time_w = 0
-    # time_L = 0
-    # time_assign = 0
     for l in range(M_0, M_0*(n_mc+1)):
-        # t0 = time.time_ns()
         z_l_half = z_l + delta_t*0.5*y_l
-        # t1 = time.time_ns()
         w_l_1 = np.random.normal(scale = sqrt(delta_t), size = (nu,N)).dot(a) #wiener process
-        # t2 = time.time_ns()
         L_l_half = L(z_l_half.dot(np.transpose(g)), g_c, x_mean, eta, s_v, hat_s_v, mu, phi, psi, lambda_i).dot(a)
-        # plt.plot(z_l_half.dot(np.transpose(g))[0], z_l_half.dot(np.transpose(g))[1], 'ro')
-        # plt.show()
-        # t3 = time.time_ns()
         y_l_1 = (1-beta)*y_l/(1+beta) + delta_t*(L_l_half)/(1+beta) + sqrt(f_0)*w_l_1/(1+beta)
         z_l = z_l_half + delta_t*0.5*y_l_1
         y_l = y_l_1
-        # t4 = time.time_ns()
         if l%M_0 == M_0-1:
             eta_lambda[:,int(l/M_0)*N:(int(l/M_0)+1)*N] = z_l.dot(np.transpose(g))
             nu_lambda[:,int(l/M_0)*N:(int(l/M_0)+1)*N] = y_l.dot(np.transpose(g))
             x_[:,int(l/M_0)-1:int(l/M_0)] = mean(x_mean + phi.dot(np.diag(mu)).dot(eta_lambda[:,:(int(l/M_0)+1)*N]))
             x_2[:,int(l/M_0)-1:int(l/M_0)] = mean((x_mean + phi.dot(np.diag(mu)).dot(eta_lambda[:,:(int(l/M_0)+1)*N]))**2)
-    #     t5 = time.time_ns()
-    #     time_z = time_z + t1-t0
-    #     time_w = time_w + t2-t1
-    #     time_L = time_L + t3-t2
-    #     time_assign = time_assign + t5-t4
-    # print('Time z:', time_z/(M_0*n_mc))
-    # print('Time w:', time_w/(M_0*n_mc))
-    # print('Time L:', time_L/(M_0*n_mc))
-    # print('Time assign:', time_assign/(M_0*n_mc))
-
     return eta_lambda[:,N:], nu_lambda[:,N:], x_, x_2
 
 def ac(sig):
     sig = sig - np.mean(sig)
     sft = np.fft.rfft( np.concatenate((sig,0*sig)) )
     return np.fft.irfft(np.conj(sft)*sft)
-
-def D_x_g_c(x):
-    D = np.zeros((20,2))#np.zeros((20,2))
-    D[0,0] = 1
-    D[0,1] = 2*x[0,0]
-    # D[0,1] = 2*x[0,0]
-    return D#np.array([[1, 2*x[0,0]],[0, 0]])
 
 def L(y, g_c, x_mean, eta, s_v, hat_s_v, mu, phi, psi, lambda_i): #gradient of the potential
     nu = eta.shape[0]
@@ -367,17 +340,3 @@ def gradient_expo(y):
     f = np.zeros((2,1))
     f = -(y-meann)*exp(-0.5*np.transpose(y-meann).dot(y-meann))
     return f
-
-
-#================================================erase
-# # ctypes_test.py
-# from ctypes import *
-# import ctypes
-# import pathlib
-# so_file =  "C://Users//asus2//Box Sync//Box Sync//PLOM With Constraints//Code//PLoM_C_library.dll"
-# c_lib = ctypes.windll.LoadLibrary(so_file)
-
-# t0 = time.time()
-# plom.rho(y,eta,1,1)
-# time_ = time.time()-t0
-# print(time_)
