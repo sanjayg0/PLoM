@@ -36,12 +36,12 @@ for i in range(5,20):
     x[i] = ((-1)**2)*i*x[3]+ np.random.uniform(-0.1, 0.1, N)
 
 # read x from a '.dat' file
-x = []
-with open('./data for batteries/plmdata_big.dat', 'r') as f:
-    d = f.readlines()
-    for i in d:
-        k = i.rstrip().split(" ")
-        x.append([float(i) for i in k])
+#x = []
+#with open('./data for batteries/plmdata_big.dat', 'r') as f:
+    #d = f.readlines()
+    #for i in d:
+        #k = i.rstrip().split(" ")
+        #x.append([float(i) for i in k])
 
 x = (np.array(x, dtype='float'))
 
@@ -70,18 +70,18 @@ plt.title('Histogram x_4')
 plt.subplot(3,3,5)
 plt.hist(x[4], bins = 100, color = 'blue')
 plt.title('Histogram x_5')
-plt.subplot(3,3,6)
-plt.hist(x[5], bins = 100, color = 'blue')
-plt.title('Histogram x_6')
-plt.subplot(3,3,7)
-plt.hist(x[6], bins = 100, color = 'blue')
-plt.title('Histogram x_7')
-plt.subplot(3,3,8)
-plt.hist(x[7], bins = 100, color = 'blue')
-plt.title('Histogram x_8')
-plt.subplot(3,3,9)
-plt.hist(x[8], bins = 100, color = 'blue')
-plt.title('Histogram x_9')
+#plt.subplot(3,3,6)
+#plt.hist(x[5], bins = 100, color = 'blue')
+#plt.title('Histogram x_6')
+#plt.subplot(3,3,7)
+#plt.hist(x[6], bins = 100, color = 'blue')
+#plt.title('Histogram x_7')
+#plt.subplot(3,3,8)
+#plt.hist(x[7], bins = 100, color = 'blue')
+#plt.title('Histogram x_8')
+#plt.subplot(3,3,9)
+#plt.hist(x[8], bins = 100, color = 'blue')
+#plt.title('Histogram x_9')
 plt.show()
 
 #definition of the function of the constraints
@@ -204,7 +204,7 @@ K, b = plom.K(eta,epsilon)
 g, eigenvalues = plom.g(K,b) #diffusion maps
 g = g
 eigenvalues = eigenvalues
-m = N#plom.m(eigenvalues)
+m = plom.m(eigenvalues)
 print('m: ', m)
 
 print(eigenvalues[1])
@@ -225,14 +225,14 @@ z_init = eta_init.dot(a)
 y_init = nu_init.dot(a)
 gradient = plom.gradient_gamma(b_c, eta_init, g_c, phi, mu, psi, x_mean)
 
-n_mc = 200#adjust the number of new matrices
+n_mc = 10#adjust the number of new matrices
 i = 0
 
 errors = [plom.err(gradient,b_c)]
 
 tol = 1e-6
 
-while i < 130:# or errors[i] > tol:#tol:
+while (i < 50 and errors[i] > tol):#tol:
     eta_lambda, nu_lambda, x_, x_2 = plom.generator(z_init, y_init, a,\
                                     n_mc, x_mean, eta, s_v, hat_s_v, mu, phi, g[:,0:m],  psi,\
                                     lambda_i, g_c) #solve the ISDE in n_mc iterations
@@ -278,18 +278,12 @@ plt.xlabel('x')
 plt.ylabel('y')
 plt.show()
 
-plt.plot(x_c[10,:], x_c[11,:], 'rx')
-plt.plot(x[10], x[11], 'bo')
-plt.xlabel('x')
-plt.ylabel('y')
-plt.show()
-
 plt.subplot(2,2,1)
 plt.plot(x_[0,:])
 plt.ylabel('Mean of x[0]',fontsize=16)
 
 plt.subplot(2,2,2)
-plt.plot(x_[10,:])
+plt.plot(x_[1,:])
 plt.ylabel('Mean of x[1]',fontsize=16)
 
 plt.subplot(2,2,3)
@@ -299,7 +293,7 @@ plt.ylabel(r'$\chi_x(t)$',fontsize=16)
 # plt.xlabel('MC Sweeps',fontsize=16)
 
 plt.subplot(2,2,4)
-chi = plom.ac(x_[10,:(n_mc//2)])
+chi = plom.ac(x_[1,:(n_mc//2)])
 plt.plot(chi[:chi.size]/chi[0])
 plt.ylabel(r'$\chi_x^{2}(t)$',fontsize=16)
 # plt.xlabel('MC Sweeps',fontsize=16)
@@ -383,40 +377,42 @@ blue_patch = mpatches.Patch(color='blue', label='X')
 plt.legend(handles=[red_patch, blue_patch])
 plt.show()
 
-import matplotlib.patches as mpatches
-plt.subplot(2,1,1)
-plt.hist(x_c[18], bins = 100, color = 'red')
-plt.subplot(2,1,2)
-plt.hist(x[18], bins = 100, color = 'blue')
-plt.title('Histogram of f(A)')
-red_patch = mpatches.Patch(color='red', label='X new realizations')
-blue_patch = mpatches.Patch(color='blue', label='X')
-plt.legend(handles=[red_patch, blue_patch])
-plt.show()
+#import matplotlib.patches as mpatches
+#plt.subplot(2,1,1)
+#plt.hist(x_c[18], bins = 100, color = 'red')
+#plt.subplot(2,1,2)
+#plt.hist(x[18], bins = 100, color = 'blue')
+#plt.title('Histogram of f(A)')
+#red_patch = mpatches.Patch(color='red', label='X new realizations')
+#blue_patch = mpatches.Patch(color='blue', label='X')
+#plt.legend(handles=[red_patch, blue_patch])
+#plt.show()
 
-import matplotlib.patches as mpatches
-plt.xlabel('f($A_B^1$)')
-plt.subplot(2,1,1)
-plt.hist(x_c[20], bins = 100, color = 'red')
-plt.subplot(2,1,2)
-plt.hist(x[20], bins = 100, color = 'blue')
-plt.title('Histogram of f($A_B^1$)')
-red_patch = mpatches.Patch(color='red', label='X new realizations')
-blue_patch = mpatches.Patch(color='blue', label='X')
-plt.legend(handles=[red_patch, blue_patch])
-plt.show()
+#import matplotlib.patches as mpatches
+#plt.xlabel('f($A_B^1$)')
+#plt.subplot(2,1,1)
+#plt.hist(x_c[20], bins = 100, color = 'red')
+#plt.subplot(2,1,2)
+#plt.hist(x[20], bins = 100, color = 'blue')
+#plt.title('Histogram of f($A_B^1$)')
+#red_patch = mpatches.Patch(color='red', label='X new realizations')
+#blue_patch = mpatches.Patch(color='blue', label='X')
+#plt.legend(handles=[red_patch, blue_patch])
+#plt.show()
 
-import matplotlib.patches as mpatches
-plt.xlabel('$A^5$')
-plt.subplot(2,1,1)
-plt.hist(x_c[5], bins = 100, color = 'red')
-plt.subplot(2,1,2)
-plt.hist(x[5], bins = 100, color = 'blue')
-plt.title('Histogram of $A^5$')
-red_patch = mpatches.Patch(color='red', label='X new realizations')
-blue_patch = mpatches.Patch(color='blue', label='X')
-plt.legend(handles=[red_patch, blue_patch])
-plt.show()
+#import matplotlib.patches as mpatches
+#plt.xlabel('$A^5$')
+#plt.subplot(2,1,1)
+#plt.hist(x_c[5], bins = 100, color = 'red')
+#plt.subplot(2,1,2)
+#plt.hist(x[5], bins = 100, color = 'blue')
+#plt.title('Histogram of $A^5$')
+#red_patch = mpatches.Patch(color='red', label='X new realizations')
+#blue_patch = mpatches.Patch(color='blue', label='X')
+#plt.legend(handles=[red_patch, blue_patch])
+#plt.show()
+
+
 
 #calculate and plot the pdfs in R^2
 # points = 100

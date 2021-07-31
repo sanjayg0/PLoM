@@ -134,7 +134,6 @@ def covariance(x):
     x_mean = mean(x)
     for i in range(0,N):
         C = C + (np.resize(x[:,i], x_mean.shape) - x_mean).dot(np.transpose((np.resize(x[:,i], x_mean.shape) - x_mean)))
-        # C = C + (np.transpose(x[:,i]-np.transpose(x_mean))).dot((x[:, i]-np.transpose(x_mean)))
     return C/(N-1)
 
 def PCA(x, tol):
