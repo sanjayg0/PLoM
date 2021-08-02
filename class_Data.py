@@ -1,20 +1,41 @@
 # -*- coding: utf-8 -*-
 #JGA
-from matplotlib import pyplot as plt
 import numpy as np
-from scipy import integrate
-from math import sqrt, exp, pi, log
-import time
+import random
+from math import pi, sqrt
+import PLoM_library as plom
+import matplotlib.pyplot as plt
+#export DISPLAY=localhost:0.0
 from ctypes import *
-c_lib = CDLL("./PLoM_C_library.so")
-c_lib.rho.restype = c_double
+
+z_init.generator(z_init, y_init, a, n_mc, x_mean, eta, s_v, hat_s_v , mu, phi, g, psi = 0, lambda_i = 0, g_c = 0)
+
 
 class Data():
-    def __init__(self, values, constraints, npoints, dimensions):
-        self.values = values
-        self.constraints = constraints
-        self.npoints = values.shape[1]
-        self.dimensions = values.shape[0]
+    def __init__(self, Xvalues, constraints = ''):
+        self._Xvalues = LoadData(Xvalues) #matrix of data points
+        self._npoints = Xvalues.shape[1]
+        self._dimensions = Xvalues.shape[0]
+        self._constraints = AddConstraints(constraints)
+
+    def AddConstraints(NewConstraints):
+        self._constraints = NewConstraints
+
+    def LoadData(Xvalues):
+        #read .csv/.txt/.mat ...
+
+        return X
+
+    def RunAlgorithm():
+        #...
+
+    def Hreduction():
+        #...PCA...
+        self._Hvalues= PCA(Xvalues,....)
+
+    def DiffMaps():
+        #..diff maps basis...
+        self._Zvalues= PCA(Hvalues,....)
 
     def generator(z_init, y_init, a, n_mc, x_mean, eta, s_v, hat_s_v, mu, phi, g, psi = 0, lambda_i = 0, g_c = 0):
         delta_t = 2*pi*hat_s_v/20
