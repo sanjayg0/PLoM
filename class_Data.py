@@ -28,28 +28,24 @@ class PLoM:
 
         # check if the file exist
         import os
+        import pandas as pd
         if not os.path.exists(filename):
             print('load_data: Error - the input file {} is not found'.format(filename))
             return X, N, NewConstraints
         
         # read data
         if filename.split('.')[-1] in ['csv','dat','txt']:
-            print(filename)
             # txt data
-            import pandas as pd
             col = None
             if col_header:
                 col = 0
             tmp = pd.read_table(filename, delimiter=seperator, header=col)
-            print(tmp)
             # remove all-nan column if any
             for cur_col in tmp.columns:
-                print(cur_col)
                 if all(np.isnan(tmp.loc[:,cur_col])):
                     print(cur_col)
-                    tmp.drop(columns=col_col)
+                    tmp.drop(columns=cur_col)
             X = tmp.to_numpy()
-            print(X)
 
         elif filename.split('.')[-1] in ['mat', 'json']:
             # json or mat
@@ -57,21 +53,27 @@ class PLoM:
                 import scipy.io as scio
                 matdata = scio.loadmat(filename)
                 var_names = [x for x in list(matdata.keys()) if not x.startswith('__')]
+                if len(var_names) == 1:
+                    # single matrix
+                    X = matdata[var_names[0]]
+                    tmp = pd.DataFrame(X, columns=['Var'+str(x) for x in X.shape[1]])
+                else:
+                    n = len(var_names)
+                    # multiple columns
+                    for cur_var in var_names:
+                        X.append(matdata[cur_var].tolist())
+                    X = np.array(X).T
+                    X = X[0,:,:]
+                    tmp = pd.DataFrame(X, columns=var_names)
             else:
                 import json
                 with open(filename) as f:
                     jsondata = json.load(f)
                 var_names = list(jsondata.keys())
-
-            if len(var_names) == 1:
-                # single matrix
-                X = matdata[var_names[0]]
-                tmp = pd.DataFrame(X, columns=['Var'+str(x) for x in X.shape[1]])
-            else:
-                n = len(var_names)
+                print(var_names)
                 # multiple columns
                 for cur_var in var_names:
-                    X.append(matdata[cur_var].tolist())
+                    X.append(jsondata[cur_var])
                 X = np.array(X).T
                 tmp = pd.DataFrame(X, columns=var_names)
 
@@ -100,12 +102,14 @@ class PLoM:
         # load new data
         new_X, new_N, new_n = self.load_data(filename, seperator, col_header)
         # check data sizes
-        if new_n != self._n:
+        if new_n != self.n:
             print('add_data: Error - incompatable column size when loading {}'.format(filename))
             return 1
         else:
             # update the X and N
-            self.X = np.concatenate(self._X, new_X)
+            print(self.X)
+            print(new_X)
+            self.X = np.concatenate((self.X, new_X))
             self.N = self.N + new_N
         
         return 0
