@@ -25,7 +25,17 @@ class Data():
         self._Xvalues = X
 
     def RunAlgorithm():
-        #...
+        #scaling
+        Xvalues, self._alpha, self._x_min = plom.scaling(Xvalues)
+
+        #PCA
+        self._Hreduction()
+
+        #parameters KDE
+        (self._s_v, self._c_v, self._hat_s_v) = plom.parameters_kde(eta)
+
+        #diff maps
+        self._DiffMaps()
 
         #no constraints
         Hnewvalues, nu_lambda, x_, x_2 = plom.generator(z_init, y_init, a,\
