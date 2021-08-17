@@ -8,23 +8,121 @@ import matplotlib.pyplot as plt
 #export DISPLAY=localhost:0.0
 from ctypes import *
 
-z_init.generator(z_init, y_init, a, n_mc, x_mean, eta, s_v, hat_s_v , mu, phi, g, psi = 0, lambda_i = 0, g_c = 0)
 
+class PLoM:
+    def __init__(self, data='', seperator=',', col_header=False, constraints = ''):
+        self.initialize_data(data, seperator, col_header)
+        #self._npoints = Xvalues.shape[1]
+        #self._dimensions = Xvalues.shape[0]
+        #self._constraints = AddConstraints(constraints)
 
-class Data():
-    def __init__(self, Xvalues, constraints = ''):
-        self._Xvalues = LoadData(Xvalues) #matrix of data points
-        self._npoints = Xvalues.shape[1]
-        self._dimensions = Xvalues.shape[0]
-        self._constraints = AddConstraints(constraints)
-
-    def AddConstraints(NewConstraints):
+    def AddConstraints(self, NewConstraints):
         self._constraints = NewConstraints
 
-    def LoadData(Xvalues):
-        #read .csv/.txt/.mat ...
+    def load_data(self, filename, seperator=',', col_header=False):
 
-        return X
+        # initialize the matrix and data size
+        X = []
+        N = 0
+        n = 0
+
+        # check if the file exist
+        import os
+        if not os.path.exists(filename):
+            print('load_data: Error - the input file {} is not found'.format(filename))
+            return X, N, NewConstraints
+        
+        # read data
+        if filename.split('.')[-1] in ['csv','dat','txt']:
+            print(filename)
+            # txt data
+            import pandas as pd
+            col = None
+            if col_header:
+                col = 0
+            tmp = pd.read_table(filename, delimiter=seperator, header=col)
+            print(tmp)
+            # remove all-nan column if any
+            for cur_col in tmp.columns:
+                print(cur_col)
+                if all(np.isnan(tmp.loc[:,cur_col])):
+                    print(cur_col)
+                    tmp.drop(columns=col_col)
+            X = tmp.to_numpy()
+            print(X)
+
+        elif filename.split('.')[-1] in ['mat', 'json']:
+            # json or mat
+            if filename.split('.')[-1] == 'mat':
+                import scipy.io as scio
+                matdata = scio.loadmat(filename)
+                var_names = [x for x in list(matdata.keys()) if not x.startswith('__')]
+            else:
+                import json
+                with open(filename) as f:
+                    jsondata = json.load(f)
+                var_names = list(jsondata.keys())
+
+            if len(var_names) == 1:
+                # single matrix
+                X = matdata[var_names[0]]
+                tmp = pd.DataFrame(X, columns=['Var'+str(x) for x in X.shape[1]])
+            else:
+                n = len(var_names)
+                # multiple columns
+                for cur_var in var_names:
+                    X.append(matdata[cur_var].tolist())
+                X = np.array(X).T
+                tmp = pd.DataFrame(X, columns=var_names)
+
+        else:
+            print('load_data: Error - the file format is not supported yet.')
+            print('load_data: Warning - accepted data format: csv, dat, txt, mat, json.')
+
+        # Update data sizes
+        N, n = X.shape
+        print(N)
+        print(n)
+
+        # Return data and data sizes
+        return X, N, n
+
+    #def check_var_name():
+
+        
+    def get_data(self):
+
+        # return data and data sizes
+        return self.X, self.N, self.n
+    
+    def add_data(self, filename, seperator=',', col_header=False):
+
+        # load new data
+        new_X, new_N, new_n = self.load_data(filename, seperator, col_header)
+        # check data sizes
+        if new_n != self._n:
+            print('add_data: Error - incompatable column size when loading {}'.format(filename))
+            return 1
+        else:
+            # update the X and N
+            self.X = np.concatenate(self._X, new_X)
+            self.N = self.N + new_N
+        
+        return 0
+
+    def initialize_data(self, filename, seperator=',', col_header=False, constraints = ''):
+
+        # initialize the data and data sizes
+        try:
+            self.X, self.N, self.n = self.load_data(filename, seperator, col_header)
+        except:
+            print('initialize_data: Error - cannot initialize data with {}'.format(filename))
+            return 1
+
+        return 0
+
+    """
+    def PlotDataMatrix():
 
     def RunAlgorithm():
         #...
@@ -36,6 +134,8 @@ class Data():
     def DiffMaps():
         #..diff maps basis...
         self._Zvalues= PCA(Hvalues,....)
+    
+    """
 
     def generator(z_init, y_init, a, n_mc, x_mean, eta, s_v, hat_s_v, mu, phi, g, psi = 0, lambda_i = 0, g_c = 0):
         delta_t = 2*pi*hat_s_v/20
