@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 #export DISPLAY=localhost:0.0
 from ctypes import *
 
-
 class PLoM:
     def __init__(self, data='', seperator=',', col_header=False, constraints = ''):
         self.initialize_data(data, seperator, col_header)
@@ -17,6 +16,7 @@ class PLoM:
         #self._constraints = AddConstraints(constraints)
 
     def AddConstraints(self, NewConstraints):
+
         self._constraints = NewConstraints
 
     def load_data(self, filename, seperator=',', col_header=False):
@@ -32,7 +32,7 @@ class PLoM:
         if not os.path.exists(filename):
             print('load_data: Error - the input file {} is not found'.format(filename))
             return X, N, NewConstraints
-        
+
         # read data
         if filename.split('.')[-1] in ['csv','dat','txt']:
             # txt data
@@ -91,12 +91,11 @@ class PLoM:
 
     #def check_var_name():
 
-        
     def get_data(self):
 
         # return data and data sizes
         return self.X, self.N, self.n
-    
+
     def add_data(self, filename, seperator=',', col_header=False):
 
         # load new data
@@ -127,88 +126,106 @@ class PLoM:
 
     """
     def PlotDataMatrix():
+    """
 
-    def RunAlgorithm():
-        #...
+    def RunAlgorithm(self):
+
+        #scaling
+        self.X, self.alpha, self.x_min = plom.scaling(self.X)
+
+        #PCA
+        self._Hreduction()
+
+        #parameters KDE
+        (self._s_v, self._c_v, self._hat_s_v) = plom.parameters_kde(eta)
+
+        #diff maps
+        self._DiffMaps()
+
+        #no constraints
+        Hnewvalues, nu_lambda, x_, x_2 = plom.generator(z_init, y_init, a,\
+                                    n_mc, x_mean, eta, s_v, hat_s_v, mu, phi, g[:,0:m],  psi,\
+                                    lambda_i, g_c) #solve the ISDE in n_mc iterations
+        Xnewvalues = x_mean + phi.dot(np.diag(mu)).dot(Hnewvalues)
 
     def Hreduction():
         #...PCA...
-        self._Hvalues= PCA(Xvalues,....)
+        tol = 1e-9
+        (self._Hvalues, self._mu, self._phi) = plom.PCA(Xvalues, tol)
+        self._nu = len(eta)
 
     def DiffMaps():
         #..diff maps basis...
-        self._Zvalues= PCA(Hvalues,....)
-    
-    """
+        self.Zvalues= PCA(Hvalues,....)
+        epsilon = 16
+        K, b = plom.K(Hvalues,epsilon)
+        g, eigenvalues = plom.g(K,b) #diffusion maps
+        eigenvalues = eigenvalues
+        m = plom.m(eigenvalues)
+        a = g[:,0:m].dot(np.linalg.inv(np.transpose(g[:,0:m]).dot(g[:,0:m])))
+        self._Zvalues = Hvalues.dot(a)
+        
+    def PostProcess():
+    	#...output plots...
 
-    def generator(z_init, y_init, a, n_mc, x_mean, eta, s_v, hat_s_v, mu, phi, g, psi = 0, lambda_i = 0, g_c = 0):
-        delta_t = 2*pi*hat_s_v/20
-        print('delta t: ', delta_t)
-        f_0 = 1.5
-        l_0 = 10#200
-        M_0 = 10#20
-        beta = f_0*delta_t/4
-        nu = z_init.shape[0]
-        N = a.shape[0]
-        eta_lambda = np.zeros((nu,(n_mc+1)*N))
-        nu_lambda = np.zeros((nu,(n_mc+1)*N))
-        n = x_mean.shape[0]
-        x_ = np.zeros((n,n_mc))
-        x_2 = np.zeros((n,n_mc))
-        z_l = z_init
-        y_l = y_init
-        eta_lambda[:,0:N] = z_init.dot(np.transpose(g))
-        nu_lambda[:,0:N] = y_init.dot(np.transpose(g))
-        for i in range (0,l_0):
-            z_l_half = z_l + delta_t*0.5*y_l
-            w_l_1 = np.random.normal(scale = sqrt(delta_t), size = (nu,N)).dot(a) #wiener process
-            L_l_half = L(z_l_half.dot(np.transpose(g)), g_c, x_mean, eta, s_v, hat_s_v, mu, phi, psi, lambda_i).dot(a)
-            y_l_1 = (1-beta)*y_l/(1+beta) + delta_t*(L_l_half)/(1+beta) + sqrt(f_0)*w_l_1/(1+beta)
-            z_l = z_l_half + delta_t*0.5*y_l_1
-            y_l = y_l_1
-        for l in range(M_0, M_0*(n_mc+1)):
-            z_l_half = z_l + delta_t*0.5*y_l
-            w_l_1 = np.random.normal(scale = sqrt(delta_t), size = (nu,N)).dot(a) #wiener process
-            L_l_half = L(z_l_half.dot(np.transpose(g)), g_c, x_mean, eta, s_v, hat_s_v, mu, phi, psi, lambda_i).dot(a)
-            y_l_1 = (1-beta)*y_l/(1+beta) + delta_t*(L_l_half)/(1+beta) + sqrt(f_0)*w_l_1/(1+beta)
-            z_l = z_l_half + delta_t*0.5*y_l_1
-            y_l = y_l_1
-            if l%M_0 == M_0-1:
-                eta_lambda[:,int(l/M_0)*N:(int(l/M_0)+1)*N] = z_l.dot(np.transpose(g))
-                nu_lambda[:,int(l/M_0)*N:(int(l/M_0)+1)*N] = y_l.dot(np.transpose(g))
-                x_[:,int(l/M_0)-1:int(l/M_0)] = mean(x_mean + phi.dot(np.diag(mu)).dot(eta_lambda[:,:(int(l/M_0)+1)*N]))
-                x_2[:,int(l/M_0)-1:int(l/M_0)] = mean((x_mean + phi.dot(np.diag(mu)).dot(eta_lambda[:,:(int(l/M_0)+1)*N]))**2)
-        return eta_lambda[:,N:], nu_lambda[:,N:], x_, x_2
+    	#plot some histograms
+        import matplotlib.patches as mpatches
+        plt.plot(Xnewvalues[0,:], Xnewvalues[1,:], 'rx')
+        plt.plot(Xvalues[0], Xvalues[1], 'bo')
+        plt.xlabel('x')
+        plt.ylabel('y')
+        red_patch = mpatches.Patch(color='red', label='X_c')
+        blue_patch = mpatches.Patch(color='blue', label='X')
+        plt.legend(handles=[red_patch, blue_patch])
+        plt.show()
 
-    def L(y, g_c, x_mean, eta, s_v, hat_s_v, mu, phi, psi, lambda_i): #gradient of the potential
-        nu = eta.shape[0]
-        N = eta.shape[1]
-        L = np.zeros((nu,N))
-        for l in range(0,N):
+        import matplotlib.patches as mpatches
+        plt.xlabel('x1')
+        plt.subplot(2,1,1)
+        plt.hist(Xnewvalues[0], bins = 100, color = 'red')
+        plt.subplot(2,1,2)
+        plt.hist(Xvalues[0], bins = 100, color = 'blue')
+        plt.title('Histogram')
+        red_patch = mpatches.Patch(color='red', label='X_c')
+        blue_patch = mpatches.Patch(color='blue', label='X')
+        plt.legend(handles=[red_patch, blue_patch])
+        plt.shlow()
 
-            yl = np.resize(y[:,l],(len(y[:,l]),1))
-            rho_ = rhoctypes(yl, np.resize(np.transpose(eta),(nu*N,1)),\
-                    nu, N, s_v, hat_s_v)
-            rho_ = 1e250*rho_
-            if rho_ < 1e-250:
-                print(rho_)
-                closest = 1e30
-                for i in range(0,N):
-                    if closest > np.linalg.norm((hat_s_v/s_v)*np.resize(eta[:,i],yl.shape)-yl):
-                        closest = np.linalg.norm((hat_s_v/s_v)*np.resize(eta[:,i],yl.shape)-yl)
-                        vector = (hat_s_v/s_v)*np.resize(eta[:,i],yl.shape)-yl
-                L[:,l] = (  np.resize(vector/(hat_s_v**2),(nu))\
-                    -np.resize(np.diag(mu).dot(np.transpose(phi)).\
-                            dot(D_x_g_c(x_mean+np.resize(phi.dot(np.diag(mu)).dot(yl), (x_mean.shape)))).\
-                            dot(psi).dot(lambda_i), (nu)))
+        import matplotlib.patches as mpatches
+        plt.xlabel('x2')
+        plt.subplot(2,1,1)
+        plt.hist(Xnewvalues[1], bins = 100, color = 'red')
+        plt.subplot(2,1,2)
+        plt.hist(Xvalues[1], bins = 100, color = 'blue')
+        plt.title('Histogram')
+        red_patch = mpatches.Patch(color='red', label='X new realizations')
+        blue_patch = mpatches.Patch(color='blue', label='X')
+        plt.legend(handles=[red_patch, blue_patch])
+        plt.show()
 
-            else:
-                array_pointer = cast(gradient_rhoctypes(np.zeros((nu,1)),yl,\
-                    np.resize(np.transpose(eta),(nu*N,1)), nu, N, s_v, hat_s_v), POINTER(c_double*nu))
-                gradient_rho = np.frombuffer(array_pointer.contents)
-                    #np.resize(gradient_expo(yl)/expo(yl),(nu))\
-                L[:,l] = np.resize(1e250*gradient_rho/rho_,(nu))\
-                        -np.resize(np.diag(mu).dot(np.transpose(phi)).\
-                                dot(D_x_g_c(x_mean+np.resize(phi.dot(np.diag(mu)).dot(yl), (x_mean.shape)))).\
-                                    dot(psi).dot(lambda_i), (nu))
-        return L
+        import matplotlib.patches as mpatches
+        plt.xlabel('x3')
+        plt.subplot(2,1,1)
+        plt.hist(Xnewvalues[2], bins = 100, color = 'red')
+        plt.subplot(2,1,2)
+        plt.hist(Xvalues[2], bins = 100, color = 'blue')
+        plt.title('Histogram')
+        red_patch = mpatches.Patch(color='red', label='X new realizations')
+        blue_patch = mpatches.Patch(color='blue', label='X')
+        plt.legend(handles=[red_patch, blue_patch])
+        plt.show()
+
+        import matplotlib.patches as mpatches
+        plt.xlabel('x4')
+        plt.subplot(2,1,1)
+        plt.hist(Xnewvalues[3], bins = 100, color = 'red')
+        plt.subplot(2,1,2)
+        plt.hist(Xvalues[3], bins = 100, color = 'blue')
+        plt.title('Histogram')
+        red_patch = mpatches.Patch(color='red', label='X new realizations')
+        blue_patch = mpatches.Patch(color='blue', label='X')
+        plt.legend(handles=[red_patch, blue_patch])
+        plt.show()
+
+
+        
