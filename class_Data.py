@@ -88,6 +88,7 @@ class PLoM:
 
         # Return data and data sizes
         return X, N, n
+        #return self.X, self.N, self.n
 
     #def check_var_name():
 
@@ -101,7 +102,7 @@ class PLoM:
         # load new data
         new_X, new_N, new_n = self.load_data(filename, seperator, col_header)
         # check data sizes
-        if new_n != self.n:
+        if new_n != self.n: self.X, self.N, self.n
             print('add_data: Error - incompatable column size when loading {}'.format(filename))
             return 1
         else:
@@ -131,39 +132,42 @@ class PLoM:
     def RunAlgorithm(self):
 
         #scaling
-        self.X, self.alpha, self.x_min = plom.scaling(self.X)
+        self.X_scaled, self.alpha, self.x_min = plom.scaling(self.X)
+        self.x_mean = plom.mean(self.X_scaled)
 
         #PCA
-        self._Hreduction()
+        self.Hreduction(self)
 
         #parameters KDE
-        (self._s_v, self._c_v, self._hat_s_v) = plom.parameters_kde(eta)
+        (self.s_v, self.c_v, self.hat_s_v) = plom.parameters_kde(self.H)
 
         #diff maps
-        self._DiffMaps()
+        self.DiffMaps(self)
 
         #no constraints
         Hnewvalues, nu_lambda, x_, x_2 = plom.generator(z_init, y_init, a,\
                                     n_mc, x_mean, eta, s_v, hat_s_v, mu, phi, g[:,0:m],  psi,\
                                     lambda_i, g_c) #solve the ISDE in n_mc iterations
-        Xnewvalues = x_mean + phi.dot(np.diag(mu)).dot(Hnewvalues)
+        self.Xnew = self.x_mean + phi.dot(np.diag(mu)).dot(Hnewvalues)
 
-    def Hreduction():
+    def Hreduction(self):
         #...PCA...
         tol = 1e-9
-        (self._Hvalues, self._mu, self._phi) = plom.PCA(Xvalues, tol)
-        self._nu = len(eta)
+        (self.H, self.mu, self.phi) = plom.PCA(self.X_scaled, tol)
+        self.nu = len(eta)
+        return self.H, self.mu, self.phi, self.nu
 
-    def DiffMaps():
+    def DiffMaps(self):
         #..diff maps basis...
-        self.Zvalues= PCA(Hvalues,....)
+        self.Z = PCA(self.H)
         epsilon = 16
-        K, b = plom.K(Hvalues,epsilon)
-        g, eigenvalues = plom.g(K,b) #diffusion maps
-        eigenvalues = eigenvalues
-        m = plom.m(eigenvalues)
-        a = g[:,0:m].dot(np.linalg.inv(np.transpose(g[:,0:m]).dot(g[:,0:m])))
-        self._Zvalues = Hvalues.dot(a)
+        self.K, self.b = plom.K(self.H, epsilon)
+        self.g, self.eigenvalues = plom.g(self.K, self.b) #diffusion maps
+        self.m = plom.m(eigenvalues)
+        self.a = (self.g[:,0:m]).dot(np.linalg.inv(np.transpose(self.g[:,0:m]).dot(self.g[:,0:m])))
+        self.Z = (self.H).dot(self.a)
+
+        return self.Z, self.a, self.K, self.b, self.g, self.eigenvalues, self.m, self.a, self.Z
         
     def PostProcess():
     	#...output plots...
