@@ -7,19 +7,76 @@ import PLoM_library as plom
 import matplotlib.pyplot as plt
 #export DISPLAY=localhost:0.0
 from ctypes import *
+import importlib
+from pathlib import Path
+import sys
 
 class PLoM:
-    def __init__(self, data='', seperator=',', col_header=False, constraints = ''):
-        self.initialize_data(data, seperator, col_header)
+    def __init__(self, data='', separator=',', col_header=False, constraints = None):
+        self.initialize_data(data, separator, col_header)
+        self.constraints = {}
+        self.num_constraints = 0
+        if self.add_constraints(constraints_file=constraints):
+            print('PLoM: constraints input failed.')
         #self._npoints = Xvalues.shape[1]
         #self._dimensions = Xvalues.shape[0]
         #self._constraints = AddConstraints(constraints)
 
-    def AddConstraints(self, NewConstraints):
+    def add_constraints(self, constraints_file = None):
 
-        self._constraints = NewConstraints
+        if constraints_file is None:
+            self.g_c = None
+            self.beta_c = []
+            print('add_constraints: no user-defined constraint - please use add_constraints(constraints_file=X) to add new constraints if any.')
+            return 0
 
-    def load_data(self, filename, seperator=',', col_header=False):
+        try:
+            # path
+            path_constraints = Path(constraints_file).resolve()
+            sys.path.insert(0, str(path_constraints.parent)+'/')
+            # load the function
+            new_constraints = importlib.__import__(path_constraints.name[:-3], globals(), locals(), [], 0)
+            #self.g_c = new_constraints.g_c
+            #self.beta_c = new_constraints.beta_c()
+        except:
+            print('add_constraints: Error - could not add constraints {}'.format(constraints_file))
+            return 1
+        self.num_constraints = self.num_constraints+1
+        self.constraints.update({
+            'Constraint'+str(self.num_constraints): {
+                'g_c': new_constraints.g_c,
+                'beta_c': new_constraints.beta_c()
+            }
+        })
+        self.g_c = new_constraints.g_c
+        self.beta_c = new_constraints.beta_c()
+        print('add_constraints: constraints added')
+        return 0
+
+        #self._constraints = NewConstraints
+
+    def switch_constraints(self, constraint_tag = 1):
+
+        if constraint_tag > self.num_constraints:
+            print('get_constratins: sorry the maximum constraint tag is {}'.format(self.num_constraints))
+            #return None, []
+
+        try:
+            g_c = self.constraints.get('Constraint'+str(constraint_tag)).get('g_c')
+            beta_c = self.constraints.get('Constraint'+str(constraint_tag)).get('beta_c')
+            self.g_c = new_constraints.g_c
+            self.beta_c = new_constraints.beta_c()
+            #return g_c, beta_c
+        except:
+            print('get_constratins: Error - cannot get constraints')
+            #return None, []
+
+    def delete_constraints(self):
+
+        self.g_c = None
+        self.beta_c = []
+
+    def load_data(self, filename, separator=',', col_header=False):
 
         # initialize the matrix and data size
         X = []
@@ -39,7 +96,7 @@ class PLoM:
             col = None
             if col_header:
                 col = 0
-            tmp = pd.read_table(filename, delimiter=seperator, header=col)
+            tmp = pd.read_table(filename, delimiter=separator, header=col)
             # remove all-nan column if any
             for cur_col in tmp.columns:
                 if all(np.isnan(tmp.loc[:,cur_col])):
@@ -96,12 +153,12 @@ class PLoM:
         # return data and data sizes
         return self.X, self.N, self.n
 
-    def add_data(self, filename, seperator=',', col_header=False):
+    def add_data(self, filename, separator=',', col_header=False):
 
         # load new data
-        new_X, new_N, new_n = self.load_data(filename, seperator, col_header)
+        new_X, new_N, new_n = self.load_data(filename, separator, col_header)
         # check data sizes
-        if new_n != self.n: self.X, self.N, self.n
+        if new_n != self.n:
             print('add_data: Error - incompatable column size when loading {}'.format(filename))
             return 1
         else:
@@ -113,11 +170,11 @@ class PLoM:
         
         return 0
 
-    def initialize_data(self, filename, seperator=',', col_header=False, constraints = ''):
+    def initialize_data(self, filename, separator=',', col_header=False, constraints = ''):
 
         # initialize the data and data sizes
         try:
-            self.X, self.N, self.n = self.load_data(filename, seperator, col_header)
+            self.X, self.N, self.n = self.load_data(filename, separator, col_header)
         except:
             print('initialize_data: Error - cannot initialize data with {}'.format(filename))
             return 1
