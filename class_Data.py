@@ -43,7 +43,6 @@ class PLoM:
             # remove all-nan column if any
             for cur_col in tmp.columns:
                 if all(np.isnan(tmp.loc[:,cur_col])):
-                    print(cur_col)
                     tmp.drop(columns=cur_col)
             X = tmp.to_numpy()
 
