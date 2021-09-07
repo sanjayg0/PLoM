@@ -29,6 +29,8 @@ class PLoM:
         if constraints_file is None:
             self.g_c = None
             self.beta_c = []
+            self.lambda_i = 0
+            self.psi = 0
             self.logfile.write_msg(msg='PLoM.add_constraints: no user-defined constraint - please use add_constraints(constraints_file=X) to add new constraints if any.',msg_type='WARNING',msg_level=0)
             return 0
 
@@ -59,20 +61,18 @@ class PLoM:
 
         if constraint_tag > self.num_constraints:
             self.logfile.write_msg(msg='PLoM.switch_constraints: sorry the maximum constraint tag is {}'.format(self.num_constraints),msg_type='ERROR',msg_level=0)
-            #return None, []
-
         try:
             self.g_c = self.constraints.get('Constraint'+str(constraint_tag)).get('g_c')
             self.beta_c = self.constraints.get('Constraint'+str(constraint_tag)).get('beta_c')
-            #return g_c, beta_c
         except:
             self.logfile.write_msg(msg='PLoM.get_constraints: cannot get constraints',msg_type='ERROR',msg_level=0)
-            #return None, []            
+
 
     def delete_constraints(self):
 
         self.g_c = None
         self.beta_c = []
+
 
     def load_data(self, filename, separator=',', col_header=False):
 
@@ -141,15 +141,16 @@ class PLoM:
         print(n)
 
         # Return data and data sizes
-        return X, N, n
-        #return self.X, self.N, self.n
+        return X.T, N, n
 
     #def check_var_name():
+
 
     def get_data(self):
 
         # return data and data sizes
         return self.X, self.N, self.n
+
 
     def add_data(self, filename, separator=',', col_header=False):
 
@@ -168,6 +169,7 @@ class PLoM:
         
         return 0
 
+
     def initialize_data(self, filename, separator=',', col_header=False, constraints = ''):
 
         # initialize the data and data sizes
@@ -179,50 +181,60 @@ class PLoM:
 
         return 0
 
-    """
-    def PlotDataMatrix():
-    """
 
-    def RunAlgorithm(self):
+    def RunAlgorithm(self, n_mc = 20, epsilon_pca = 1e-6, epsilon_kde = 25):
+        """
+        Running the PLoM algorithm to train the model and generate new realizations
+        - n_mc: realization/sample size ratio
+        - epsilon_pca: tolerance for selecting the number of considered componenets in PCA
+        - epsilon_kde: smoothing parameter in the kernel density estimation
+        """
 
         #scaling
         self.X_scaled, self.alpha, self.x_min = plom.scaling(self.X)
         self.x_mean = plom.mean(self.X_scaled)
 
         #PCA
-        self.Hreduction(self)
+        self.Hreduction(epsilon_pca)
 
         #parameters KDE
         (self.s_v, self.c_v, self.hat_s_v) = plom.parameters_kde(self.H)
+        self.K, self.b = plom.K(self.H, epsilon_kde)
 
         #diff maps
-        self.DiffMaps(self)
+        self.DiffMaps()
 
         #no constraints
-        Hnewvalues, nu_lambda, x_, x_2 = plom.generator(z_init, y_init, a,\
-                                    n_mc, x_mean, eta, s_v, hat_s_v, mu, phi, g[:,0:m],  psi,\
-                                    lambda_i, g_c) #solve the ISDE in n_mc iterations
-        self.Xnew = self.x_mean + phi.dot(np.diag(mu)).dot(Hnewvalues)
+        nu_init = np.random.normal(size=(self.nu,self.N))
+        self.Y = nu_init.dot(self.a)
+        Hnewvalues, nu_lambda, x_, x_2 = plom.generator(self.Z, self.Y, self.a,\
+                                    n_mc, self.x_mean, self.H, self.s_v,\
+                                    self.hat_s_v, self.mu, self.phi,\
+                                    self.g[:,0:self.m],  psi=self.psi,\
+                                    lambda_i=self.lambda_i, g_c=self.g_c) #solve the ISDE in n_mc iterations
+        self.Xnew = self.x_mean + self.phi.dot(np.diag(self.mu)).dot(Hnewvalues)
 
-    def Hreduction(self):
+        # unscale
+        self.Xnew = np.diag(self.alpha).dot(self.Xnew)+self.x_min
+
+
+    def Hreduction(self, epsilon_pca):
         #...PCA...
-        tol = 1e-9
-        (self.H, self.mu, self.phi) = plom.PCA(self.X_scaled, tol)
-        self.nu = len(eta)
-        return self.H, self.mu, self.phi, self.nu
+        (self.H, self.mu, self.phi) = plom.PCA(self.X_scaled, epsilon_pca)
+        self.nu = len(self.H)
+        self.logfile.write_msg(msg='PLoM.Hreduction: considered number of PCA components = {}'.format(self.nu),msg_type='RUNNING',msg_level=0)
+
 
     def DiffMaps(self):
         #..diff maps basis...
-        self.Z = PCA(self.H)
-        epsilon = 16
-        self.K, self.b = plom.K(self.H, epsilon)
-        self.g, self.eigenvalues = plom.g(self.K, self.b) #diffusion maps
-        self.m = plom.m(eigenvalues)
-        self.a = (self.g[:,0:m]).dot(np.linalg.inv(np.transpose(self.g[:,0:m]).dot(self.g[:,0:m])))
+        #self.Z = PCA(self.H)
+        g, self.eigenvalues = plom.g(self.K, self.b) #diffusion maps
+        self.g = g.real
+        self.m = plom.m(self.eigenvalues)
+        self.a = self.g[:,0:self.m].dot(np.linalg.inv(np.transpose(self.g[:,0:self.m]).dot(self.g[:,0:self.m])))
         self.Z = (self.H).dot(self.a)
 
-        return self.Z, self.a, self.K, self.b, self.g, self.eigenvalues, self.m, self.a, self.Z
-        
+
     def PostProcess():
     	#...output plots...
 

@@ -6,7 +6,8 @@ from scipy import integrate
 from math import sqrt, exp, pi, log
 import time
 from ctypes import *
-c_lib = CDLL("./PLoM_C_library.so")
+import os
+c_lib = CDLL(os.path.join(os.path.dirname(os.path.abspath(__file__)),"PLoM_C_library.so"))
 c_lib.rho.restype = c_double
 
 
@@ -86,8 +87,8 @@ def g(K, b):
     return g, eigenvalues
 
 def D_x_g_c(x):
-    #dependo on g(x)
-    D = np.zeros((20,2))#np.zeros((20,2))
+    #depend on g(x)
+    D = np.zeros((x.shape[0],2))
     D[0,0] = 1
     D[0,1] = 2*x[0,0]
     # D[0,1] = 2*x[0,0]
