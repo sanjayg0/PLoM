@@ -3,6 +3,7 @@
 import os
 from datetime import datetime
 import numpy as np
+import pandas as pd
 
 # PLoM path
 plom_dir = os.path.dirname(os.path.abspath(__file__))
@@ -11,7 +12,7 @@ class Logfile:
     def __init__(self, logfile_dir = plom_dir, logfile_name = 'plom.log', screen_msg = True):
         """
         Initializing the logfile
-        - logfile_path: default is the same path of the PLoM package
+        - logfile_dir: default is the same path of the PLoM package
         - logfile_name: default is the "plom.log"
         - screen_msg: default is to show message on screen
         """
@@ -46,3 +47,63 @@ class Logfile:
             os.remove(self.logfile_path)
         else:
             print('The logfile {} does not exist.'.format(self.logfile_path))
+
+
+class DBServer:
+    def __init__(self, db_dir = plom_dir, db_name = 'plom.h5'):
+        """
+        Initializing the database
+        - db_dir: default is the same path of the PLoM package
+        - db_name: default is "plom.h5"
+        """
+        self.db_dir = db_dir
+        self.db_name = db_name
+        self.db_path = os.path.join(self.db_dir, self.db_name)
+        self.init_time = datetime.utcnow()
+        self._basic()
+
+    
+    def _basic(self):
+        """
+        Writing basic info
+        """
+        df = pd.DataFrame.from_dict({
+            'InitializedTime': [self.init_time],
+            'LastEditedTime': [datetime.utcnow()],
+            'DBName': [self.db_name]
+        }, dtype=str)
+        store = pd.HDFStore(self.db_path, 'a')
+        df.to_hdf(store, 'basic', mode='a')
+        store.close()
+
+
+    def add_item(self, item_name = None, col_names = None, item = []):
+        """
+        Adding a new data item into database
+        """
+        if item.ndim > 1:
+            df = pd.DataFrame(item, columns = col_names)
+        else:
+            if col_names is None:
+                col_names = item_name
+            df = pd.DataFrame.from_dict({
+                col_names: item.tolist()
+            })
+        if item_name is not None:
+            store = pd.HDFStore(self.db_path, 'a')
+            df.to_hdf(store, item_name, mode='a')
+            store.close()
+
+
+    def get_item(self, item_name = None):
+        """
+        Getting a specific data item
+        """
+        if item_name is not None:
+            store = pd.HDFStore(self.db_path, 'r')
+            try:
+                item = store.get(item_name)
+            except:
+                item = None
+
+            return item
