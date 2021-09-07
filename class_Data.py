@@ -10,24 +10,26 @@ from ctypes import *
 import importlib
 from pathlib import Path
 import sys
+from general import Logfile
 
 class PLoM:
     def __init__(self, data='', separator=',', col_header=False, constraints = None):
-        self.initialize_data(data, separator, col_header)
+        # intialize logfile
+        self.logfile = Logfile()
+        if self.initialize_data(data, separator, col_header):
+            self.logfile.write_msg(msg='PLoM: Data loading failed.',msg_type='ERROR',msg_level=0)
         self.constraints = {}
         self.num_constraints = 0
         if self.add_constraints(constraints_file=constraints):
-            print('PLoM: constraints input failed.')
-        #self._npoints = Xvalues.shape[1]
-        #self._dimensions = Xvalues.shape[0]
-        #self._constraints = AddConstraints(constraints)
+            self.logfile.write_msg(msg='PLoM: Constraints input failed.',msg_type='ERROR',msg_level=0)
+
 
     def add_constraints(self, constraints_file = None):
 
         if constraints_file is None:
             self.g_c = None
             self.beta_c = []
-            print('add_constraints: no user-defined constraint - please use add_constraints(constraints_file=X) to add new constraints if any.')
+            self.logfile.write_msg(msg='PLoM.add_constraints: no user-defined constraint - please use add_constraints(constraints_file=X) to add new constraints if any.',msg_type='WARNING',msg_level=0)
             return 0
 
         try:
@@ -36,40 +38,36 @@ class PLoM:
             sys.path.insert(0, str(path_constraints.parent)+'/')
             # load the function
             new_constraints = importlib.__import__(path_constraints.name[:-3], globals(), locals(), [], 0)
-            #self.g_c = new_constraints.g_c
-            #self.beta_c = new_constraints.beta_c()
         except:
-            print('add_constraints: Error - could not add constraints {}'.format(constraints_file))
+            self.logfile.write_msg(msg='PLoM.add_constraints: could not add constraints {}'.format(constraints_file),msg_type='ERROR',msg_level=0)
             return 1
         self.num_constraints = self.num_constraints+1
         self.constraints.update({
             'Constraint'+str(self.num_constraints): {
+                'filename': constraints_file,
                 'g_c': new_constraints.g_c,
                 'beta_c': new_constraints.beta_c()
             }
         })
         self.g_c = new_constraints.g_c
         self.beta_c = new_constraints.beta_c()
-        print('add_constraints: constraints added')
+        self.logfile.write_msg(msg='PLoM.add_constraints: constraints added.',msg_type='RUNNING',msg_level=0)
         return 0
 
-        #self._constraints = NewConstraints
 
     def switch_constraints(self, constraint_tag = 1):
 
         if constraint_tag > self.num_constraints:
-            print('get_constratins: sorry the maximum constraint tag is {}'.format(self.num_constraints))
+            self.logfile.write_msg(msg='PLoM.switch_constraints: sorry the maximum constraint tag is {}'.format(self.num_constraints),msg_type='ERROR',msg_level=0)
             #return None, []
 
         try:
-            g_c = self.constraints.get('Constraint'+str(constraint_tag)).get('g_c')
-            beta_c = self.constraints.get('Constraint'+str(constraint_tag)).get('beta_c')
-            self.g_c = new_constraints.g_c
-            self.beta_c = new_constraints.beta_c()
+            self.g_c = self.constraints.get('Constraint'+str(constraint_tag)).get('g_c')
+            self.beta_c = self.constraints.get('Constraint'+str(constraint_tag)).get('beta_c')
             #return g_c, beta_c
         except:
-            print('get_constratins: Error - cannot get constraints')
-            #return None, []
+            self.logfile.write_msg(msg='PLoM.get_constraints: cannot get constraints',msg_type='ERROR',msg_level=0)
+            #return None, []            
 
     def delete_constraints(self):
 
@@ -87,8 +85,8 @@ class PLoM:
         import os
         import pandas as pd
         if not os.path.exists(filename):
-            print('load_data: Error - the input file {} is not found'.format(filename))
-            return X, N, NewConstraints
+            self.logfile.write_msg(msg='load_data: Error - the input file {} is not found'.format(filename),msg_type='ERROR',msg_level=0)
+            return X, N, n
 
         # read data
         if filename.split('.')[-1] in ['csv','dat','txt']:
@@ -159,7 +157,7 @@ class PLoM:
         new_X, new_N, new_n = self.load_data(filename, separator, col_header)
         # check data sizes
         if new_n != self.n:
-            print('add_data: Error - incompatable column size when loading {}'.format(filename))
+            self.logfile.write_msg(msg='PLoM.add_data: incompatible column size when loading {}'.format(filename),msg_type='ERROR',msg_level=0)
             return 1
         else:
             # update the X and N
@@ -176,7 +174,7 @@ class PLoM:
         try:
             self.X, self.N, self.n = self.load_data(filename, separator, col_header)
         except:
-            print('initialize_data: Error - cannot initialize data with {}'.format(filename))
+            self.logfile.write_msg(msg='PLoM.initialize_data: cannot initialize data with {}'.format(filename),msg_type='ERROR',msg_level=0)
             return 1
 
         return 0

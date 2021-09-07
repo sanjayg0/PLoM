@@ -1,0 +1,6 @@
+## logfile:
+*.log
+
+# compiled python files/caches
+__pycache__/*
+*.pyc
