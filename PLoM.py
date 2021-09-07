@@ -223,7 +223,7 @@ class PLoM:
         self.logfile.write_msg(msg='PLoM.RunAlgorithm: X_scaled and X_scaled_mean saved.',msg_type='RUNNING',msg_level=0)
 
         #PCA
-        self.H, self.mu, self.phi, self.nu = self.Hreduction(self.X_scaled, epsilon_pca)
+        self.H, self.mu, self.phi, self.nu = self._Hreduction(self.X_scaled, epsilon_pca)
         self.logfile.write_msg(msg='PLoM.RunAlgorithm: PCA completed.',msg_type='RUNNING',msg_level=0)
         self.dbserver.add_item(item_name = 'X_PCA', col_names = ['Component'+str(i+1) for i in range(self.H.shape[0])], item = self.H.T)
         self.dbserver.add_item(item_name = 'EigenValue_PCA', col_names = 'EigenValue_PCA', item = self.mu)
@@ -239,7 +239,7 @@ class PLoM:
         self.dbserver.add_item(item_name = 'EigenValues_KDE', item = self.b)
 
         #diff maps
-        self.g, self.m, self.a, self.Z = self.DiffMaps(self.H, self.K, self.b)
+        self.g, self.m, self.a, self.Z = self._DiffMaps(self.H, self.K, self.b)
         self.logfile.write_msg(msg='PLoM.RunAlgorithm: diffusion maps completed.',msg_type='RUNNING',msg_level=0)
         self.dbserver.add_item(item_name = 'DiffMaps_g', item = self.g)
         self.dbserver.add_item(item_name = 'DiffMaps_m', item = np.array([self.m]))
@@ -264,15 +264,15 @@ class PLoM:
         self.logfile.write_msg(msg='PLoM.RunAlgorithm: X_new saved.',msg_type='RUNNING',msg_level=0)
 
 
-    def Hreduction(self, X_origin, epsilon_pca):
+    def _Hreduction(self, X_origin, epsilon_pca):
         #...PCA...
         (H, mu, phi) = plom.PCA(X_origin, epsilon_pca)
         nu = len(H)
-        self.logfile.write_msg(msg='PLoM.Hreduction: considered number of PCA components = {}'.format(nu),msg_type='RUNNING',msg_level=0)
+        self.logfile.write_msg(msg='PLoM._Hreduction: considered number of PCA components = {}'.format(nu),msg_type='RUNNING',msg_level=0)
         return H, mu, phi, nu
 
 
-    def DiffMaps(self, H, K, b):
+    def _DiffMaps(self, H, K, b):
         #..diff maps basis...
         #self.Z = PCA(self.H)
         try:
@@ -286,7 +286,7 @@ class PLoM:
             m = 0
             a = None
             Z = None
-            self.logfile.write_msg(msg='PLoM.DiffMaps: diffusion maps failed.',msg_type='ERROR',msg_level=0)
+            self.logfile.write_msg(msg='PLoM.__DiffMaps: diffusion maps failed.',msg_type='ERROR',msg_level=0)
 
         return g, m, a, Z
 
