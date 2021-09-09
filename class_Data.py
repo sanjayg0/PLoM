@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 from ctypes import *
 
 class PLoM:
-    def __init__(self, data='', seperator=',', col_header=False, constraints = ''):
-        self.initialize_data(data, seperator, col_header)
+    def __init__(self, data='', separator=',', col_header=False, constraints = ''):
+        self.initialize_data(data, separator, col_header)
         #self._npoints = Xvalues.shape[1]
         #self._dimensions = Xvalues.shape[0]
         #self._constraints = AddConstraints(constraints)
@@ -19,7 +19,7 @@ class PLoM:
 
         self._constraints = NewConstraints
 
-    def load_data(self, filename, seperator=',', col_header=False):
+    def load_data(self, filename, separator=',', col_header=False):
 
         # initialize the matrix and data size
         X = []
@@ -39,7 +39,7 @@ class PLoM:
             col = None
             if col_header:
                 col = 0
-            tmp = pd.read_table(filename, delimiter=seperator, header=col)
+            tmp = pd.read_table(filename, delimiter=separator, header=col)
             # remove all-nan column if any
             for cur_col in tmp.columns:
                 if all(np.isnan(tmp.loc[:,cur_col])):
@@ -97,12 +97,12 @@ class PLoM:
         # return data and data sizes
         return self.X, self.N, self.n
 
-    def add_data(self, filename, seperator=',', col_header=False):
+    def add_data(self, filename, separator=',', col_header=False):
 
         # load new data
-        new_X, new_N, new_n = self.load_data(filename, seperator, col_header)
+        new_X, new_N, new_n = self.load_data(filename, separator, col_header)
         # check data sizes
-        if new_n != self.n: self.X, self.N, self.n
+        if new_n != self.n:
             print('add_data: Error - incompatable column size when loading {}'.format(filename))
             return 1
         else:
@@ -114,11 +114,11 @@ class PLoM:
         
         return 0
 
-    def initialize_data(self, filename, seperator=',', col_header=False, constraints = ''):
+    def initialize_data(self, filename, separator=',', col_header=False, constraints = ''):
 
         # initialize the data and data sizes
         try:
-            self.X, self.N, self.n = self.load_data(filename, seperator, col_header)
+            self.X, self.N, self.n = self.load_data(filename, separator, col_header)
         except:
             print('initialize_data: Error - cannot initialize data with {}'.format(filename))
             return 1
@@ -136,19 +136,27 @@ class PLoM:
         self.x_mean = plom.mean(self.X_scaled)
 
         #PCA
-        self.Hreduction(self)
+        self.Hreduction()
 
         #parameters KDE
         (self.s_v, self.c_v, self.hat_s_v) = plom.parameters_kde(self.H)
 
         #diff maps
-        self.DiffMaps(self)
+        self.DiffMaps()
 
-        #no constraints
-        Hnewvalues, nu_lambda, x_, x_2 = plom.generator(z_init, y_init, a,\
-                                    n_mc, x_mean, eta, s_v, hat_s_v, mu, phi, g[:,0:m],  psi,\
-                                    lambda_i, g_c) #solve the ISDE in n_mc iterations
-        self.Xnew = self.x_mean + phi.dot(np.diag(mu)).dot(Hnewvalues)
+        if (self.g_c = None):
+            #no constraints
+            self.Hnewvalues, nu_lambda, x_, x_2 = plom.generator(z_init, y_init, a,\
+                                        n_mc, x_mean, eta, s_v, hat_s_v, mu, phi, g[:,0:m],  psi,\
+                                        lambda_i, g_c) #solve the ISDE in n_mc iterations
+        else:
+            for
+                #no constraints
+                self.Hnewvalues, nu_lambda, x_, x_2 = plom.generator(z_init, y_init, a,\
+                                        n_mc, x_mean, eta, s_v, hat_s_v, mu, phi, g[:,0:m],  psi,\
+                                        lambda_i, g_c) #solve the ISDE in n_mc iterations
+
+        self.Xnew = self.x_mean + self.phi.dot(np.diag(self.mu)).dot(self.Hnewvalues)
 
     def Hreduction(self):
         #...PCA...
