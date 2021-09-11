@@ -1,0 +1,9 @@
+## logfile:
+*.log
+
+## database:
+*.h5
+
+# compiled python files/caches
+__pycache__/*
+*.pyc
