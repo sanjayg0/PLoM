@@ -246,15 +246,19 @@ class PLoM:
         self.dbserver.add_item(item_name = 'DiffMaps_a', item = self.a)
         self.dbserver.add_item(item_name = 'DiffMaps_Z', item = self.Z)
 
+        #constraints
+        if self.constraints = None:
+
         #no constraints
-        nu_init = np.random.normal(size=(self.nu,self.N))
-        self.Y = nu_init.dot(self.a)
-        Hnewvalues, nu_lambda, x_, x_2 = plom.generator(self.Z, self.Y, self.a,\
-                                    n_mc, self.x_mean, self.H, self.s_v,\
-                                    self.hat_s_v, self.mu, self.phi,\
-                                    self.g[:,0:self.m],  psi=self.psi,\
-                                    lambda_i=self.lambda_i, g_c=self.g_c) #solve the ISDE in n_mc iterations
-        self.Xnew = self.x_mean + self.phi.dot(np.diag(self.mu)).dot(Hnewvalues)
+        else:
+            nu_init = np.random.normal(size=(self.nu,self.N))
+            self.Y = nu_init.dot(self.a)
+            Hnewvalues, nu_lambda, x_, x_2 = plom.generator(self.Z, self.Y, self.a,\
+                                        n_mc, self.x_mean, self.H, self.s_v,\
+                                        self.hat_s_v, self.mu, self.phi,\
+                                        self.g[:,0:self.m],  psi=self.psi,\
+                                        lambda_i=self.lambda_i, g_c=self.g_c) #solve the ISDE in n_mc iterations
+            self.Xnew = self.x_mean + self.phi.dot(np.diag(self.mu)).dot(Hnewvalues)
         
         #unscale
         self.Xnew = np.diag(self.alpha).dot(self.Xnew)+self.x_min
