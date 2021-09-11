@@ -7,6 +7,7 @@ from math import sqrt, exp, pi, log
 import time
 from ctypes import *
 import os
+from general import Logfile, DBServer
 c_lib = CDLL(os.path.join(os.path.dirname(os.path.abspath(__file__)),"PLoM_C_library.so"))
 c_lib.rho.restype = c_double
 
@@ -227,6 +228,18 @@ def gradient_gamma(b_c, eta_lambda, g_c, phi, mu, psi, x_mean):
 def hessian_gamma(eta_lambda, psi, g_c, phi, mu, x_mean):
     return covariance(h_c(eta_lambda, g_c, phi, mu, psi, x_mean))
 
+def solve_inverse(matrix):
+    if matrix.shape[0] != matrix.shape[1]:
+        return Logfile().write_msg(msg='PLoM: solve_inverse non-square matrix.',msg_type='ERROR',msg_level=0)
+    else:
+        inverse = np.zeros(matrix.shape)
+        for j in range(0,matrix.shape[1]):
+            unit = np.zeros(matrix.shape[1])
+            unit[j] = 1
+            solve = np.linalg.solve(matrix, unit)
+            inverse[:,j] = solve
+        return inverse
+
 
 def generator(z_init, y_init, a, n_mc, x_mean, eta, s_v, hat_s_v, mu, phi, g, psi = 0, lambda_i = 0, g_c = 0):
     delta_t = 2*pi*hat_s_v/20
@@ -283,7 +296,7 @@ def L(y, g_c, x_mean, eta, s_v, hat_s_v, mu, phi, psi, lambda_i): #gradient of t
                  nu, N, s_v, hat_s_v)
         rho_ = 1e250*rho_
         if rho_ < 1e-250:
-            print(rho_)
+            #print(rho_)
             closest = 1e30
             for i in range(0,N):
                 if closest > np.linalg.norm((hat_s_v/s_v)*np.resize(eta[:,i],yl.shape)-yl):

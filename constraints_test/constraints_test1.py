@@ -10,5 +10,5 @@ def g_c(x): #x can be a column vector or a matrix
 
 #returning the beta_c values
 def beta_c():
-    beta_c = np.array([[10], [150]])
+    beta_c = np.array([[0.5], [0.3]])
     return beta_c

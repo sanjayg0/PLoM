@@ -206,12 +206,14 @@ class PLoM:
         return 0
 
 
-    def RunAlgorithm(self, n_mc = 5, epsilon_pca = 1e-6, epsilon_kde = 25):
+    def RunAlgorithm(self, n_mc = 5, epsilon_pca = 1e-6, epsilon_kde = 25, tol_PCA2 = 1e-5, tol = 1e-6, max_iter = 50):
         """
         Running the PLoM algorithm to train the model and generate new realizations
         - n_mc: realization/sample size ratio
         - epsilon_pca: tolerance for selecting the number of considered componenets in PCA
         - epsilon_kde: smoothing parameter in the kernel density estimation
+        - tol: tolerance in the PLoM iterations
+        - max_iter: maximum number of iterations of the PLoM algorithm
         """
 
         #scaling
@@ -247,7 +249,46 @@ class PLoM:
         self.dbserver.add_item(item_name = 'DiffMaps_Z', item = self.Z)
 
         #constraints
-        if self.constraints = None:
+        if self.g_c:
+
+            self.C_h_hat_eta = plom.covariance(self.g_c(self.x_mean+(self.phi).dot(np.diag(self.mu)).dot(self.H)))
+            self.b_c, self.psi = plom.PCA2(self.C_h_hat_eta, self.beta_c, tol_PCA2)
+            self.nu_c = len(self.b_c)
+
+
+            self.hessian = plom.hessian_gamma(self.H, self.psi, self.g_c, self.phi, self.mu, self.x_mean)
+            self.inverse = plom.solve_inverse(self.hessian)
+
+            self.lambda_i = -(self.inverse)\
+            .dot(plom.gradient_gamma(self.b_c, self.H, self.g_c, self.phi, self.mu, self.psi, self.x_mean))
+
+            self.gradient = plom.gradient_gamma(self.b_c, self.H, self.g_c, self.phi, self.mu, self.psi, self.x_mean)
+            self.errors = [plom.err(self.gradient, self.b_c)]
+            self.iteration = 0
+            nu_init = np.random.normal(size=(self.nu,self.N))
+            self.Y = nu_init.dot(self.a)
+
+            while (self.iteration < max_iter and self.errors[self.iteration] > tol):
+                self.logfile.write_msg(msg='PLoM.RunAlgorithm: Running iteration {}.'.format(self.iteration+1),msg_type='RUNNING',msg_level=0)
+
+
+                Hnewvalues, nu_lambda, x_, x_2 = plom.generator(self.Z, self.Y, self.a,\
+                                            n_mc, self.x_mean, self.H, self.s_v,\
+                                            self.hat_s_v, self.mu, self.phi,\
+                                            self.g[:,0:self.m],  psi=self.psi,\
+                                            lambda_i=self.lambda_i, g_c=self.g_c) #solve the ISDE in n_mc iterations
+
+                self.gradient = plom.gradient_gamma(self.b_c, Hnewvalues, self.g_c, self.phi, self.mu, self.psi, self.x_mean)
+                self.hessian = plom.hessian_gamma(Hnewvalues, self.psi, self.g_c, self.phi, self.mu, self.x_mean)
+                self.inverse = plom.solve_inverse(self.hessian)
+
+                self.lambda_i = self.lambda_i - 0.3*(self.inverse).dot(self.gradient)
+
+                self.Z = Hnewvalues[:,-self.N:].dot(self.a)
+                self.Y = nu_lambda[:,-self.N:].dot(self.a)
+                self.iteration += 1
+
+                (self.errors).append(plom.err(self.gradient, self.b_c))
 
         #no constraints
         else:
@@ -258,7 +299,8 @@ class PLoM:
                                         self.hat_s_v, self.mu, self.phi,\
                                         self.g[:,0:self.m],  psi=self.psi,\
                                         lambda_i=self.lambda_i, g_c=self.g_c) #solve the ISDE in n_mc iterations
-            self.Xnew = self.x_mean + self.phi.dot(np.diag(self.mu)).dot(Hnewvalues)
+
+        self.Xnew = self.x_mean + self.phi.dot(np.diag(self.mu)).dot(Hnewvalues)
         
         #unscale
         self.Xnew = np.diag(self.alpha).dot(self.Xnew)+self.x_min
