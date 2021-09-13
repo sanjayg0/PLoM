@@ -44,6 +44,7 @@ class PLoM:
 
         if constraints_file is None:
             self.g_c = None
+            self.D_x_g_c = None
             self.beta_c = []
             self.lambda_i = 0
             self.psi = 0
@@ -64,10 +65,12 @@ class PLoM:
             'Constraint'+str(self.num_constraints): {
                 'filename': constraints_file,
                 'g_c': new_constraints.g_c,
+                'D_x_g_c': new_constraints.D_x_g_c,
                 'beta_c': new_constraints.beta_c()
             }
         })
         self.g_c = new_constraints.g_c
+        self.D_x_g_c = new_contraints.D_x_g_c
         self.beta_c = new_constraints.beta_c()
         self.logfile.write_msg(msg='PLoM.add_constraints: constraints added.',msg_type='RUNNING',msg_level=0)
         return 0
@@ -83,6 +86,7 @@ class PLoM:
             self.logfile.write_msg(msg='PLoM.switch_constraints: sorry the maximum constraint tag is {}'.format(self.num_constraints),msg_type='ERROR',msg_level=0)
         try:
             self.g_c = self.constraints.get('Constraint'+str(constraint_tag)).get('g_c')
+            self.D_x_g_c = self.constraints.get('Constraint'+str(constraint_tag)).get('D_x_g_c')
             self.beta_c = self.constraints.get('Constraint'+str(constraint_tag)).get('beta_c')
         except:
             self.logfile.write_msg(msg='PLoM.get_constraints: cannot get constraints',msg_type='ERROR',msg_level=0)
@@ -94,6 +98,7 @@ class PLoM:
         """
 
         self.g_c = None
+        self.D_x_g_c = None
         self.beta_c = []
 
 
@@ -264,19 +269,19 @@ class PLoM:
 
             self.gradient = plom.gradient_gamma(self.b_c, self.H, self.g_c, self.phi, self.mu, self.psi, self.x_mean)
             self.errors = [plom.err(self.gradient, self.b_c)]
-            self.iteration = 0
+            iteration = 0
             nu_init = np.random.normal(size=(self.nu,self.N))
             self.Y = nu_init.dot(self.a)
 
-            while (self.iteration < max_iter and self.errors[self.iteration] > tol):
-                self.logfile.write_msg(msg='PLoM.RunAlgorithm: Running iteration {}.'.format(self.iteration+1),msg_type='RUNNING',msg_level=0)
+            while (iteration < max_iter and self.errors[iteration] > tol):
+                self.logfile.write_msg(msg='PLoM.RunAlgorithm: Running iteration {}.'.format(iteration+1),msg_type='RUNNING',msg_level=0)
 
 
                 Hnewvalues, nu_lambda, x_, x_2 = plom.generator(self.Z, self.Y, self.a,\
                                             n_mc, self.x_mean, self.H, self.s_v,\
                                             self.hat_s_v, self.mu, self.phi,\
                                             self.g[:,0:self.m],  psi=self.psi,\
-                                            lambda_i=self.lambda_i, g_c=self.g_c) #solve the ISDE in n_mc iterations
+                                            lambda_i=self.lambda_i, g_c=self.g_c, D_x_g_c = self.D_x_g_c) #solve the ISDE in n_mc iterations
 
                 self.gradient = plom.gradient_gamma(self.b_c, Hnewvalues, self.g_c, self.phi, self.mu, self.psi, self.x_mean)
                 self.hessian = plom.hessian_gamma(Hnewvalues, self.psi, self.g_c, self.phi, self.mu, self.x_mean)
@@ -286,9 +291,12 @@ class PLoM:
 
                 self.Z = Hnewvalues[:,-self.N:].dot(self.a)
                 self.Y = nu_lambda[:,-self.N:].dot(self.a)
-                self.iteration += 1
+                iteration += 1
 
                 (self.errors).append(plom.err(self.gradient, self.b_c))
+
+            if iteration == max_iter:
+                self.logfile.write_msg(msg='PLoM.RunAlgorithm: Max. iteration reached and convergence not achieved.',msg_type='WARNING',msg_level=0) 
 
         #no constraints
         else:
@@ -297,8 +305,7 @@ class PLoM:
             Hnewvalues, nu_lambda, x_, x_2 = plom.generator(self.Z, self.Y, self.a,\
                                         n_mc, self.x_mean, self.H, self.s_v,\
                                         self.hat_s_v, self.mu, self.phi,\
-                                        self.g[:,0:self.m],  psi=self.psi,\
-                                        lambda_i=self.lambda_i, g_c=self.g_c) #solve the ISDE in n_mc iterations
+                                        self.g[:,0:self.m]) #solve the ISDE in n_mc iterations
 
         self.Xnew = self.x_mean + self.phi.dot(np.diag(self.mu)).dot(Hnewvalues)
         

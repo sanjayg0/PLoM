@@ -87,13 +87,13 @@ def g(K, b):
     g = np.multiply(g, sqrt_norm)
     return g, eigenvalues
 
-def D_x_g_c(x):
+#def D_x_g_c(x):
     #depend on g(x)
-    D = np.zeros((x.shape[0],2))
-    D[0,0] = 1
-    D[0,1] = 2*x[0,0]
+#    D = np.zeros((x.shape[0],2))
+#    D[0,0] = 1
+#    D[0,1] = 2*x[0,0]
     # D[0,1] = 2*x[0,0]
-    return D#np.array([[1, 2*x[0,0]],[0, 0]])
+#    return D#np.array([[1, 2*x[0,0]],[0, 0]])
 
 def m(eigenvalues):
     """
@@ -241,7 +241,7 @@ def solve_inverse(matrix):
         return inverse
 
 
-def generator(z_init, y_init, a, n_mc, x_mean, eta, s_v, hat_s_v, mu, phi, g, psi = 0, lambda_i = 0, g_c = 0):
+def generator(z_init, y_init, a, n_mc, x_mean, eta, s_v, hat_s_v, mu, phi, g, psi = 0, lambda_i = 0, g_c = 0, D_x_g_c = 0):
     delta_t = 2*pi*hat_s_v/20
     print('delta t: ', delta_t)
     f_0 = 1.5
@@ -262,14 +262,14 @@ def generator(z_init, y_init, a, n_mc, x_mean, eta, s_v, hat_s_v, mu, phi, g, ps
     for i in range (0,l_0):
         z_l_half = z_l + delta_t*0.5*y_l
         w_l_1 = np.random.normal(scale = sqrt(delta_t), size = (nu,N)).dot(a) #wiener process
-        L_l_half = L(z_l_half.dot(np.transpose(g)), g_c, x_mean, eta, s_v, hat_s_v, mu, phi, psi, lambda_i).dot(a)
+        L_l_half = L(z_l_half.dot(np.transpose(g)), g_c, x_mean, eta, s_v, hat_s_v, mu, phi, psi, lambda_i, D_x_g_c).dot(a)
         y_l_1 = (1-beta)*y_l/(1+beta) + delta_t*(L_l_half)/(1+beta) + sqrt(f_0)*w_l_1/(1+beta)
         z_l = z_l_half + delta_t*0.5*y_l_1
         y_l = y_l_1
     for l in range(M_0, M_0*(n_mc+1)):
         z_l_half = z_l + delta_t*0.5*y_l
         w_l_1 = np.random.normal(scale = sqrt(delta_t), size = (nu,N)).dot(a) #wiener process
-        L_l_half = L(z_l_half.dot(np.transpose(g)), g_c, x_mean, eta, s_v, hat_s_v, mu, phi, psi, lambda_i).dot(a)
+        L_l_half = L(z_l_half.dot(np.transpose(g)), g_c, x_mean, eta, s_v, hat_s_v, mu, phi, psi, lambda_i, D_x_g_c).dot(a)
         y_l_1 = (1-beta)*y_l/(1+beta) + delta_t*(L_l_half)/(1+beta) + sqrt(f_0)*w_l_1/(1+beta)
         z_l = z_l_half + delta_t*0.5*y_l_1
         y_l = y_l_1
@@ -285,7 +285,7 @@ def ac(sig):
     sft = np.fft.rfft( np.concatenate((sig,0*sig)) )
     return np.fft.irfft(np.conj(sft)*sft)
 
-def L(y, g_c, x_mean, eta, s_v, hat_s_v, mu, phi, psi, lambda_i): #gradient of the potential
+def L(y, g_c, x_mean, eta, s_v, hat_s_v, mu, phi, psi, lambda_i, D_x_g_c): #gradient of the potential
     nu = eta.shape[0]
     N = eta.shape[1]
     L = np.zeros((nu,N))
