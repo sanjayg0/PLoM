@@ -295,6 +295,12 @@ def L(y, g_c, x_mean, eta, s_v, hat_s_v, mu, phi, psi, lambda_i, D_x_g_c): #grad
         rho_ = rhoctypes(yl, np.resize(np.transpose(eta),(nu*N,1)),\
                  nu, N, s_v, hat_s_v)
         rho_ = 1e250*rho_
+        # compute the D_x_g_c if D_x_g_c is not 0 (KZ)
+        if D_x_g_c:
+            grad_g_c = D_x_g_c(x_mean+np.resize(phi.dot(np.diag(mu)).dot(yl), (x_mean.shape)))
+        else:
+            # not constraints and no D_x_g_c
+            grad_g_c = np.zeros((x_mean.shape[0],1))
         if rho_ < 1e-250:
             #print(rho_)
             closest = 1e30
@@ -302,20 +308,26 @@ def L(y, g_c, x_mean, eta, s_v, hat_s_v, mu, phi, psi, lambda_i, D_x_g_c): #grad
                 if closest > np.linalg.norm((hat_s_v/s_v)*np.resize(eta[:,i],yl.shape)-yl):
                     closest = np.linalg.norm((hat_s_v/s_v)*np.resize(eta[:,i],yl.shape)-yl)
                     vector = (hat_s_v/s_v)*np.resize(eta[:,i],yl.shape)-yl
+            #KZ L[:,l] = (  np.resize(vector/(hat_s_v**2),(nu))\
+            #    -np.resize(np.diag(mu).dot(np.transpose(phi)).\
+            #            dot(D_x_g_c(x_mean+np.resize(phi.dot(np.diag(mu)).dot(yl), (x_mean.shape)))).\
+            #            dot(psi).dot(lambda_i), (nu)))
             L[:,l] = (  np.resize(vector/(hat_s_v**2),(nu))\
                 -np.resize(np.diag(mu).dot(np.transpose(phi)).\
-                        dot(D_x_g_c(x_mean+np.resize(phi.dot(np.diag(mu)).dot(yl), (x_mean.shape)))).\
-                        dot(psi).dot(lambda_i), (nu)))
+                        dot(grad_g_c).dot(psi).dot(lambda_i), (nu)))
 
         else:
             array_pointer = cast(gradient_rhoctypes(np.zeros((nu,1)),yl,\
                 np.resize(np.transpose(eta),(nu*N,1)), nu, N, s_v, hat_s_v), POINTER(c_double*nu))
             gradient_rho = np.frombuffer(array_pointer.contents)
                 #np.resize(gradient_expo(yl)/expo(yl),(nu))\
+            #KZ L[:,l] = np.resize(1e250*gradient_rho/rho_,(nu))\
+            #        -np.resize(np.diag(mu).dot(np.transpose(phi)).\
+            #                dot(D_x_g_c(x_mean+np.resize(phi.dot(np.diag(mu)).dot(yl), (x_mean.shape)))).\
+            #                    dot(psi).dot(lambda_i), (nu))
             L[:,l] = np.resize(1e250*gradient_rho/rho_,(nu))\
                     -np.resize(np.diag(mu).dot(np.transpose(phi)).\
-                            dot(D_x_g_c(x_mean+np.resize(phi.dot(np.diag(mu)).dot(yl), (x_mean.shape)))).\
-                                dot(psi).dot(lambda_i), (nu))
+                            dot(grad_g_c).dot(psi).dot(lambda_i), (nu))
     return L
 
 
