@@ -16,30 +16,8 @@ from general import *
 
 class PLoM:
     def __init__(self, jobname='plom', data='', separator=',', col_header=False, constraints = None, run_tag = False, plot_tag = True, num_rlz = 5, tol_pca = 1e-6, epsilon_kde = 25):
-        # initialize running directory
-        self.dir_run = os.path.join(os.path.expanduser('~/Documents'),'PLoM')
-        # initialize logfile
-        self.logfile = Logfile(logfile_dir = self.dir_run)
-        try:
-            os.makedirs(self.dir_run, exist_ok=True)
-            self.logfile.write_msg(msg='PLoM: Running directory {} initialized.'.format(self.dir_run),msg_type='RUNNING',msg_level=0)
-        except:
-            self.logfile.write_msg(msg='PLoM: Running directory {} cannot be initialized.'.format(self.dir_run),msg_type='ERROR',msg_level=0)
-        # initialize database server
-        self.dbserver = None
-        try:
-            self.dbserver = DBServer(db_dir = self.dir_run, db_name=jobname+'.h5')
-        except:
-            self.logfile.write_msg(msg='PLoM: database server initialization failed.',msg_type='ERROR',msg_level=0)
-        if self.dbserver:
-            self.logfile.write_msg(msg='PLoM: database server initialized.',msg_type='RUNNING',msg_level=0)
-        # initialize visualization output path
-        self.vl_path = os.path.join(self.dir_run,'FigOut')
-        try:
-            os.makedirs(self.vl_path, exist_ok=True)
-            self.logfile.write_msg(msg='PLoM: visualization folder {} initialized.'.format(self.vl_path),msg_type='RUNNING',msg_level=0)
-        except:
-            self.logfile.write_msg(msg='PLoM: visualization folder {} not initialized.'.format(self.vl_path),msg_type='WARNING',msg_level=0)
+        # basic setups
+        self._basic_config(jobname=jobname)
         # initialize input data
         if self.initialize_data(data, separator, col_header):
             self.logfile.write_msg(msg='PLoM: data loading failed.',msg_type='ERROR',msg_level=0)
@@ -63,7 +41,39 @@ class PLoM:
         else:
             self.logfile.write_msg(msg='PLoM: using RunAlgorithm(n_mc=n_mc,epsilon_pca=epsilon_pca,epsilon_kde) to run simulations.',msg_type='RUNNING',msg_level=0)
 
+        
+    def _basic_config(self, jobname=None):
+        """
+        Basic setups
+        - jobname: job name (used for database name)
+        """
+        # initialize log and running directories
+        self.dir_log = os.path.join(os.path.expanduser('~/Documents'),'PLoM')
+        self.dir_run = os.path.join(os.path.expanduser('~/Documents'),'PLoM',jobname)
+        # initialize logfile
+        self.logfile = Logfile(logfile_dir = self.dir_log)
+        try:
+            os.makedirs(self.dir_run, exist_ok=True)
+            self.logfile.write_msg(msg='PLoM: Running directory {} initialized.'.format(self.dir_run),msg_type='RUNNING',msg_level=0)
+        except:
+            self.logfile.write_msg(msg='PLoM: Running directory {} cannot be initialized.'.format(self.dir_run),msg_type='ERROR',msg_level=0)
+        # initialize database server
+        self.dbserver = None
+        try:
+            self.dbserver = DBServer(db_dir = self.dir_run, db_name=jobname+'.h5')
+        except:
+            self.logfile.write_msg(msg='PLoM: database server initialization failed.',msg_type='ERROR',msg_level=0)
+        if self.dbserver:
+            self.logfile.write_msg(msg='PLoM: database server initialized.',msg_type='RUNNING',msg_level=0)
+        # initialize visualization output path
+        self.vl_path = os.path.join(self.dir_run,'FigOut')
+        try:
+            os.makedirs(self.vl_path, exist_ok=True)
+            self.logfile.write_msg(msg='PLoM: visualization folder {} initialized.'.format(self.vl_path),msg_type='RUNNING',msg_level=0)
+        except:
+            self.logfile.write_msg(msg='PLoM: visualization folder {} not initialized.'.format(self.vl_path),msg_type='WARNING',msg_level=0)        
 
+    
     def add_constraints(self, constraints_file = None):
 
         if constraints_file is None:
