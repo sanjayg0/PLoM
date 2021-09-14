@@ -60,6 +60,7 @@ class DBServer:
         self.db_name = db_name
         self.db_path = os.path.join(self.db_dir, self.db_name)
         self.init_time = datetime.utcnow()
+        self.item_name_list = []
         self._basic()
 
     
@@ -107,3 +108,40 @@ class DBServer:
                 item = None
 
             return item
+
+
+    def get_name_list(self):
+        """
+        Returning the keys of the database
+        """
+        store = pd.HDFStore(self.db_path, 'r')
+        try:
+            name_list = store.keys()
+        except:
+            name_list = []
+        store.close()
+        return name_list
+
+
+    def export(self, data_name = None, filename = None, file_format = 'csv'):
+        """
+        Exporting the specific data item
+        - data_name: data tag
+        - format: data format
+        """
+        d = self.get_item(item_name = data_name)
+        if d is None:
+            return 1
+        if filename is None:
+            filename = str(data_name).replace('/','')+'.'+file_format
+        else:
+            filename = filename.split('.')[0]+'.'+file_format
+        if file_format == 'csv' or 'txt':
+            d.to_csv(filename, header=True, index=True)
+        elif file_format == 'json':
+            with open(filename, 'w') as f:
+                json.dump(d, f)
+        else:
+            return 2
+        return 0   
+        

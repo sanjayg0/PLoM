@@ -294,6 +294,9 @@ class PLoM:
                 iteration += 1
 
                 (self.errors).append(plom.err(self.gradient, self.b_c))
+            
+            #saving data
+            self.dbserver.add_item(item_name = 'Errors', item = np.array(self.errors))
 
             if iteration == max_iter:
                 self.logfile.write_msg(msg='PLoM.RunAlgorithm: Max. iteration reached and convergence not achieved.',msg_type='WARNING',msg_level=0) 
@@ -342,6 +345,39 @@ class PLoM:
             self.logfile.write_msg(msg='PLoM.__DiffMaps: diffusion maps failed.',msg_type='ERROR',msg_level=0)
 
         return g, m, a, Z
+
+    
+    def export_results(self, data_list = [], file_format_list = ['csv']):
+        """
+        Exporting results by the data names
+        - data_list: list of data names
+        - filename_list: list of output filenames
+        - file_format_list: list of output formats
+        """
+        avail_name_list = self.dbserver.get_name_list()
+        if not data_list:
+            # print available data names
+            avail_name_str = ','.join(avail_name_list)
+            self.logfile.write_msg(msg='PLoM.export_results: available data {}.'.format(avail_name_str),msg_type='RUNNING',msg_level=0)
+        if not avail_name_list:
+            # empty database
+            self.logfile.write_msg(msg='PLoM.export_results: database is empty - no data exported.',msg_type='ERROR',msg_level=0)
+        else:
+            for tag, data_i in enumerate(data_list):
+                if data_i not in avail_name_list:
+                    self.logfile.write_msg(msg='PLoM.export_results: {} is not found and skipped.'.format(data_i),msg_type='WARNING',msg_level=0)
+                else:
+                    try:
+                        ff_i = file_format_list[tag]
+                    except:
+                        ff_i = file_format_list[-1]
+                    ex_flag = self.dbserver.export(data_name = data_i, file_format = ff_i)
+                    if ex_flag == 1:
+                        self.logfile.write_msg(msg='PLoM.export_results: {} is not found and skipped.'.format(data_i),msg_type='WARNING',msg_level=0)
+                    elif ex_flag == 2:
+                        self.logfile.write_msg(msg='PLoM.export_results: {} is not supported yest.'.format(ff_i),msg_type='ERROR',msg_level=0)
+                    else:
+                        self.logfile.write_msg(msg='PLoM.export_results: {} is exported.'.format(data_i),msg_type='RUNNING',msg_level=0)
 
 
     def PostProcess():
