@@ -15,7 +15,7 @@ import sys
 from general import *
 
 class PLoM:
-    def __init__(self, data='', separator=',', col_header=False, constraints = None, run_tag = False, plot_tag = True, num_rlz = 5, tol_pca = 1e-6, epsilon_kde = 25):
+    def __init__(self, jobname='plom', data='', separator=',', col_header=False, constraints = None, run_tag = False, plot_tag = True, num_rlz = 5, tol_pca = 1e-6, epsilon_kde = 25):
         # initialize running directory
         self.dir_run = os.path.join(os.path.expanduser('~/Documents'),'PLoM')
         # initialize logfile
@@ -28,13 +28,13 @@ class PLoM:
         # initialize database server
         self.dbserver = None
         try:
-            self.dbserver = DBServer(db_dir = self.dir_run)
+            self.dbserver = DBServer(db_dir = self.dir_run, db_name=jobname+'.h5')
         except:
             self.logfile.write_msg(msg='PLoM: database server initialization failed.',msg_type='ERROR',msg_level=0)
         if self.dbserver:
             self.logfile.write_msg(msg='PLoM: database server initialized.',msg_type='RUNNING',msg_level=0)
         # initialize visualization output path
-        self.vl_path = self.dir_run+'/FigOut'
+        self.vl_path = os.path.join(self.dir_run,'FigOut')
         try:
             os.makedirs(self.vl_path, exist_ok=True)
             self.logfile.write_msg(msg='PLoM: visualization folder {} initialized.'.format(self.vl_path),msg_type='RUNNING',msg_level=0)

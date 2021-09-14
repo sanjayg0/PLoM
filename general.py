@@ -56,6 +56,9 @@ class DBServer:
         self.db_dir = db_dir
         self.db_name = db_name
         self.db_path = os.path.join(self.db_dir, self.db_name)
+        if os.path.exists(self.db_path):
+            # deleting the old database
+            os.remove(self.db_path)
         self.init_time = datetime.utcnow()
         self.item_name_list = []
         self._basic()
