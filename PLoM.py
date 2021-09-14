@@ -24,7 +24,7 @@ class PLoM:
         else:
             # plot data matrix
             if plot_tag:
-                smp = pd.plotting.scatter_matrix(self.X0_table, alpha=0.5, diagonal ='kde', figsize=(10,10))
+                smp = pd.plotting.scatter_matrix(self.X0, alpha=0.5, diagonal ='kde', figsize=(10,10))
                 for ax in smp.ravel():
                     ax.set_xlabel(ax.get_xlabel(), fontsize = 6, rotation = 45)
                     ax.set_ylabel(ax.get_ylabel(), fontsize = 6, rotation = 45)
@@ -155,12 +155,12 @@ class PLoM:
             col = None
             if col_header:
                 col = 0
-            self.X0_table = pd.read_table(filename, delimiter=separator, header=col)
+            self.X0 = pd.read_table(filename, delimiter=separator, header=col)
             # remove all-nan column if any
-            for cur_col in self.X0_table.columns:
-                if all(np.isnan(self.X0_table.loc[:,cur_col])):
-                    self.X0_table.drop(columns=cur_col)
-            X = self.X0_table.to_numpy()
+            for cur_col in self.X0.columns:
+                if all(np.isnan(self.X0.loc[:,cur_col])):
+                    self.X0.drop(columns=cur_col)
+            X = self.X0.to_numpy()
 
         elif filename.split('.')[-1] in ['mat', 'json']:
             # json or mat
@@ -171,7 +171,7 @@ class PLoM:
                 if len(var_names) == 1:
                     # single matrix
                     X = matdata[var_names[0]]
-                    self.X0_table = pd.DataFrame(X, columns=['Var'+str(x) for x in X.shape[1]])
+                    self.X0 = pd.DataFrame(X, columns=['Var'+str(x) for x in X.shape[1]])
                 else:
                     n = len(var_names)
                     # multiple columns
@@ -179,7 +179,7 @@ class PLoM:
                         X.append(matdata[cur_var].tolist())
                     X = np.array(X).T
                     X = X[0,:,:]
-                    self.X0_table = pd.DataFrame(X, columns=var_names)
+                    self.X0 = pd.DataFrame(X, columns=var_names)
             else:
                 import json
                 with open(filename) as f:
@@ -189,7 +189,7 @@ class PLoM:
                 for cur_var in var_names:
                     X.append(jsondata[cur_var])
                 X = np.array(X).T
-                self.X0_table = pd.DataFrame(X, columns=var_names)
+                self.X0 = pd.DataFrame(X, columns=var_names)
 
         else:
             self.logfile.write_msg(msg='PLoM.load_data: the file format is not supported yet.',msg_type='ERROR',msg_level=0)
@@ -222,7 +222,7 @@ class PLoM:
             # update the X and N
             self.X = np.concatenate((self.X, new_X))
             self.N = self.N + new_N
-            self.X0_table.append(pd.DataFrame(new_X.T, columns=list(self.X0_table.columns)))
+            self.X0.append(pd.DataFrame(new_X.T, columns=list(self.X0.columns)))
 
         self.logfile.write_msg(msg='PLoM.add_data: current X0 size = ({}, {}).'.format(self.N,self.n),msg_type='RUNNING',msg_level=0)
 
@@ -237,7 +237,7 @@ class PLoM:
             return 1
 
         # Save to database
-        self.dbserver.add_item(item_name = 'X0', col_names = list(self.X0_table.columns), item = self.X.T)
+        self.dbserver.add_item(item_name = 'X0', col_names = list(self.X0.columns), item = self.X.T)
         self.dbserver.add_item(item_name = 'X0_size', col_names = ['N0', 'n0'], item = np.array([[self.N,self.n]]))
         self.logfile.write_msg(msg='PLoM.initialize_data: current X0 size = ({}, {}).'.format(self.N,self.n),msg_type='RUNNING',msg_level=0)
         self.logfile.write_msg(msg='PLoM.initialize_data: X0 and X0_size saved to database.',msg_type='RUNNING',msg_level=0)
@@ -259,8 +259,8 @@ class PLoM:
         self.X_scaled, self.alpha, self.x_min = plom.scaling(self.X)
         self.x_mean = plom.mean(self.X_scaled)
         self.logfile.write_msg(msg='PLoM.RunAlgorithm: data normalization completed.',msg_type='RUNNING',msg_level=0)
-        self.dbserver.add_item(item_name = 'X_scaled', col_names = list(self.X0_table.columns), item = self.X_scaled.T)
-        self.dbserver.add_item(item_name = 'X_scaled_mean', col_names = list(self.X0_table.columns), item = self.x_mean.T)
+        self.dbserver.add_item(item_name = 'X_scaled', col_names = list(self.X0.columns), item = self.X_scaled.T)
+        self.dbserver.add_item(item_name = 'X_scaled_mean', col_names = list(self.X0.columns), item = self.x_mean.T)
         self.logfile.write_msg(msg='PLoM.RunAlgorithm: X_scaled and X_scaled_mean saved.',msg_type='RUNNING',msg_level=0)
 
         #PCA
@@ -350,7 +350,7 @@ class PLoM:
         self.Xnew = np.diag(self.alpha).dot(self.Xnew)+self.x_min
 
         self.logfile.write_msg(msg='PLoM.RunAlgorithm: Realizations generated.',msg_type='RUNNING',msg_level=0)
-        self.dbserver.add_item(item_name = 'X_new', col_names = list(self.X0_table.columns), item = self.Xnew.T)
+        self.dbserver.add_item(item_name = 'X_new', col_names = list(self.X0.columns), item = self.Xnew.T)
         self.logfile.write_msg(msg='PLoM.RunAlgorithm: X_new saved.',msg_type='RUNNING',msg_level=0)
 
 
