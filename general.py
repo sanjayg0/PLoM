@@ -5,11 +5,8 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
-# PLoM path
-plom_dir = os.path.dirname(os.path.abspath(__file__))
-
 class Logfile:
-    def __init__(self, logfile_dir = plom_dir, logfile_name = 'plom.log', screen_msg = True):
+    def __init__(self, logfile_dir = './', logfile_name = 'plom.log', screen_msg = True):
         """
         Initializing the logfile
         - logfile_dir: default is the same path of the PLoM package
@@ -21,10 +18,10 @@ class Logfile:
         self.logfile_path = os.path.join(self.logfile_dir, self.logfile_name)
         self.screen_msg = screen_msg
         # start the log
-        self.write_msg(msg = '--NEW LOG STARTING FROM THIS LINE--')
+        self.write_msg(msg = '--NEW LOG STARTING FROM THIS LINE--', mode='w')
             
     
-    def write_msg(self, msg = '', msg_type = 'RUNNING', msg_level = 0):
+    def write_msg(self, msg = '', msg_type = 'RUNNING', msg_level = 0, mode='a'):
         """
         Writing running messages
         - msg: the message
@@ -35,7 +32,7 @@ class Logfile:
         decorated_msg = '{} {} {}-MSG {} '.format(datetime.utcnow(), indent_tabs, msg_type, msg)
         if self.screen_msg:
             print(decorated_msg)
-        with open(self.logfile_path, 'a') as f:
+        with open(self.logfile_path, mode) as f:
             f.write('\n'+decorated_msg)
 
     
@@ -50,7 +47,7 @@ class Logfile:
 
 
 class DBServer:
-    def __init__(self, db_dir = plom_dir, db_name = 'plom.h5'):
+    def __init__(self, db_dir = './', db_name = 'plom.h5'):
         """
         Initializing the database
         - db_dir: default is the same path of the PLoM package
@@ -62,7 +59,8 @@ class DBServer:
         self.init_time = datetime.utcnow()
         self.item_name_list = []
         self._basic()
-
+        self.dir_export = self._create_export_dir()
+            
     
     def _basic(self):
         """
@@ -76,6 +74,18 @@ class DBServer:
         store = pd.HDFStore(self.db_path, 'a')
         df.to_hdf(store, 'basic', mode='a')
         store.close()
+
+
+    def _create_export_dir(self):
+        """
+        Creating a export folder
+        """
+        dir_export = os.path.join(self.db_dir,'DataOut')
+        try:
+            os.makedirs(dir_export, exist_ok=True)
+            return dir_export
+        except:
+            return None
 
 
     def add_item(self, item_name = None, col_names = None, item = []):
@@ -106,6 +116,7 @@ class DBServer:
                 item = store.get(item_name)
             except:
                 item = None
+            store.close()
 
             return item
 
@@ -133,9 +144,9 @@ class DBServer:
         if d is None:
             return 1
         if filename is None:
-            filename = str(data_name).replace('/','')+'.'+file_format
+            filename = os.path.join(self.dir_export,str(data_name).replace('/','')+'.'+file_format)
         else:
-            filename = filename.split('.')[0]+'.'+file_format
+            filename = os.path.join(self.dir_export,filename.split('.')[0]+'.'+file_format)
         if file_format == 'csv' or 'txt':
             d.to_csv(filename, header=True, index=True)
         elif file_format == 'json':
@@ -143,5 +154,4 @@ class DBServer:
                 json.dump(d, f)
         else:
             return 2
-        return 0   
-        
+        return 0

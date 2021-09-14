@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #JGA
+import os
 import numpy as np
 import pandas as pd
 import random
@@ -11,23 +12,46 @@ from ctypes import *
 import importlib
 from pathlib import Path
 import sys
-from general import Logfile, DBServer
+from general import *
 
 class PLoM:
-    def __init__(self, data='', separator=',', col_header=False, constraints = None, run_tag = False, num_rlz = 5, tol_pca = 1e-6, epsilon_kde = 25):
+    def __init__(self, data='', separator=',', col_header=False, constraints = None, run_tag = False, plot_tag = True, num_rlz = 5, tol_pca = 1e-6, epsilon_kde = 25):
+        # initialize running directory
+        self.dir_run = os.path.join(os.path.expanduser('~/Documents'),'PLoM')
         # initialize logfile
-        self.logfile = Logfile()
+        self.logfile = Logfile(logfile_dir = self.dir_run)
+        try:
+            os.makedirs(self.dir_run, exist_ok=True)
+            self.logfile.write_msg(msg='PLoM: Running directory {} initialized.'.format(self.dir_run),msg_type='RUNNING',msg_level=0)
+        except:
+            self.logfile.write_msg(msg='PLoM: Running directory {} cannot be initialized.'.format(self.dir_run),msg_type='ERROR',msg_level=0)
         # initialize database server
         self.dbserver = None
         try:
-            self.dbserver = DBServer()
+            self.dbserver = DBServer(db_dir = self.dir_run)
         except:
             self.logfile.write_msg(msg='PLoM: database server initialization failed.',msg_type='ERROR',msg_level=0)
         if self.dbserver:
             self.logfile.write_msg(msg='PLoM: database server initialized.',msg_type='RUNNING',msg_level=0)
-        # initialize data
+        # initialize visualization output path
+        self.vl_path = self.dir_run+'/FigOut'
+        try:
+            os.makedirs(self.vl_path, exist_ok=True)
+            self.logfile.write_msg(msg='PLoM: visualization folder {} initialized.'.format(self.vl_path),msg_type='RUNNING',msg_level=0)
+        except:
+            self.logfile.write_msg(msg='PLoM: visualization folder {} not initialized.'.format(self.vl_path),msg_type='WARNING',msg_level=0)
+        # initialize input data
         if self.initialize_data(data, separator, col_header):
             self.logfile.write_msg(msg='PLoM: data loading failed.',msg_type='ERROR',msg_level=0)
+        else:
+            # plot data matrix
+            if plot_tag:
+                smp = pd.plotting.scatter_matrix(self.X0_table, alpha=0.5, diagonal ='kde', figsize=(10,10))
+                for ax in smp.ravel():
+                    ax.set_xlabel(ax.get_xlabel(), fontsize = 6, rotation = 45)
+                    ax.set_ylabel(ax.get_ylabel(), fontsize = 6, rotation = 45)
+                plt.savefig(os.path.join(self.vl_path,'ScatterMatrix_X0.png'),dpi=480)
+                self.logfile.write_msg(msg='PLoM: {} saved in {}.'.format('ScatterMatrix_X0.png',self.vl_path),msg_type='RUNNING',msg_level=0)
         # initialize constraints
         self.constraints = {}
         self.num_constraints = 0
@@ -70,7 +94,7 @@ class PLoM:
             }
         })
         self.g_c = new_constraints.g_c
-        self.D_x_g_c = new_contraints.D_x_g_c
+        self.D_x_g_c = new_constraints.D_x_g_c
         self.beta_c = new_constraints.beta_c()
         self.logfile.write_msg(msg='PLoM.add_constraints: constraints added.',msg_type='RUNNING',msg_level=0)
         return 0
@@ -377,7 +401,7 @@ class PLoM:
                     elif ex_flag == 2:
                         self.logfile.write_msg(msg='PLoM.export_results: {} is not supported yest.'.format(ff_i),msg_type='ERROR',msg_level=0)
                     else:
-                        self.logfile.write_msg(msg='PLoM.export_results: {} is exported.'.format(data_i),msg_type='RUNNING',msg_level=0)
+                        self.logfile.write_msg(msg='PLoM.export_results: {} is exported in {}.'.format(data_i,self.dbserver.dir_export),msg_type='RUNNING',msg_level=0)
 
 
     def PostProcess():
