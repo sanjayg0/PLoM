@@ -7,6 +7,7 @@ import random
 from math import pi, sqrt
 import PLoM_library as plom
 import matplotlib.pyplot as plt
+import warnings
 #export DISPLAY=localhost:0.0
 from ctypes import *
 import importlib
@@ -146,11 +147,11 @@ class PLoM:
         # check if the file exist
         import os
         if not os.path.exists(filename):
-            self.logfile.write_msg(msg='load_data: Error - the input file {} is not found'.format(filename),msg_type='ERROR',msg_level=0)
+            self.logfile.write_msg(msg='load_data: the input file {} is not found'.format(filename),msg_type='ERROR',msg_level=0)
             return X, N, n
 
         # read data
-        if filename.split('.')[-1] in ['csv','dat','txt']:
+        if os.path.splitext(filename)[-1] in ['.csv','.dat','.txt']:
             # txt data
             col = None
             if col_header:
@@ -162,9 +163,9 @@ class PLoM:
                     self.X0.drop(columns=cur_col)
             X = self.X0.to_numpy()
 
-        elif filename.split('.')[-1] in ['mat', 'json']:
+        elif os.path.splitext(filename)[-1] in ['.mat', '.json']:
             # json or mat
-            if filename.split('.')[-1] == 'mat':
+            if os.path.splitext(filename)[-1] == '.mat':
                 import scipy.io as scio
                 matdata = scio.loadmat(filename)
                 var_names = [x for x in list(matdata.keys()) if not x.startswith('__')]
@@ -190,6 +191,11 @@ class PLoM:
                     X.append(jsondata[cur_var])
                 X = np.array(X).T
                 self.X0 = pd.DataFrame(X, columns=var_names)
+        
+        elif os.path.splitext(filename)[-1] in ['.h5']:
+            # this h5 can be either formatted by PLoM or not
+            # a separate method to deal with this file
+            X = self.load_h5(filename)
 
         else:
             self.logfile.write_msg(msg='PLoM.load_data: the file format is not supported yet.',msg_type='ERROR',msg_level=0)
@@ -209,6 +215,86 @@ class PLoM:
 
         # return data and data sizes
         return self.X, self.N, self.n
+
+
+    def _load_h5_plom(self, filename):
+        """
+        Loading PLoM-formatted h5 database 
+        """
+        try:
+            store = pd.HDFStore(filename, 'r')
+            for cur_var in store.keys():
+                if cur_var in self.dbserver.get_item_adds() and ATTR_MAP[cur_var]:
+                    # read in
+                    cur_data = store[cur_var]
+                    self.dbserver.add_item(item_name=cur_var.replace('/',''),col_names=list(cur_data.columns),item=cur_data)
+            store.close()
+
+        except:
+            self.logfile.write_msg(msg='PLoM._load_h5_plom: data in {} not compatible.'.format(filename),msg_type='ERROR',msg_level=0)
+
+
+
+    def _load_h5_data_X(self, filename):
+        """
+        Loading a h5 data which is expected to contain X data
+        """
+        try:
+            store = pd.HDFStore(filename, 'r')
+            # Note a table is expected for the variable
+            self.X0 = store.get(store.keys()[0])
+            store.close()
+            self.dbserver.add_item(item_name='X0',col_name=list(self.X0.columns),item=self.X0)
+
+            return self.X0.to_numpy()
+        except:
+            return None
+
+
+    def _sync_data(self):
+        """
+        Sync database data to current attributes
+        """
+        avail_name_list = self.dbserver.get_name_list()
+        if not avail_name_list:
+            # empty database
+            self.logfile.write_msg(msg='PLoM._sync_data: database is empty - no data to sync.',msg_type='WARNING',msg_level=0)
+        else:
+            for cur_item in avail_name_list:
+                if type(ATTR_MAP[cur_item]) is str:
+                    # only one data group in this data item:
+                    self.__setattr__(ATTR_MAP[cur_item],self.dbserver.get_item(cur_item))
+                    self.logfile.write_msg(msg='PLoM._sync_data: self.{} synced.'.format(ATTR_MAP[cur_item]),msg_type='RUNNING',msg_level=0)
+                elif type(ATTR_MAP[cur_item]) is list:
+                    # multiple data groups
+                    for cur_var in ATTR_MAP[cur_item]:
+                        self.__setattr__(cur_var,self.dbserver.get_item(cur_item).get(cur_var))
+                        self.logfile.write_msg(msg='PLoM._sync_data: self.{} synced.'.format(cur_var),msg_type='RUNNING',msg_level=0)
+                else:
+                    # None type (this is the 'basic' - skipped)
+                    self.logfile.write_msg(msg='PLoM._sync_data: data {} skipped.'.format(cur_item),msg_type='RUNNING',msg_level=0)
+
+
+    def load_h5(self, filename):
+        """
+        Loading h5 database
+        """
+        try:
+            self._load_h5_plom(filename)
+            # sync data
+            self._sync_data()
+            if '/X0' in self.dbserver.get_name_list():
+                return self.X0.to_numpy()
+            else:
+                self.logfile.write_msg(msg='PLoM.load_h5: the original X0 data not found in the loaded data.',msg_type='ERROR',msg_level=0)
+                return None
+        except:
+            X = self._load_h5_data_X(filename)
+            if X is None:
+                self.logfile.write_msg(msg='PLoM.load_h5: cannot load {}.'.format(filename),msg_type='ERROR',msg_level=0)
+                return None
+            else:
+                return X
 
 
     def add_data(self, filename, separator=',', col_header=False):
@@ -238,7 +324,7 @@ class PLoM:
 
         # Save to database
         self.dbserver.add_item(item_name = 'X0', col_names = list(self.X0.columns), item = self.X.T)
-        self.dbserver.add_item(item_name = 'X0_size', col_names = ['N0', 'n0'], item = np.array([[self.N,self.n]]))
+        self.dbserver.add_item(item_name = 'X0_size', col_names = ['N', 'n'], item = np.array([[self.N,self.n]]))
         self.logfile.write_msg(msg='PLoM.initialize_data: current X0 size = ({}, {}).'.format(self.N,self.n),msg_type='RUNNING',msg_level=0)
         self.logfile.write_msg(msg='PLoM.initialize_data: X0 and X0_size saved to database.',msg_type='RUNNING',msg_level=0)
 

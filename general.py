@@ -5,6 +5,17 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
+ITEM_LIST = ['X0','X0_size','X_scaled','X_scaled_mean','X_PCA',
+    'EigenValue_PCA','EigenVector_PCA','KDE','X_KDE','EigenValues_KDE',
+    'DiffMaps_g','DiffMaps_m','DiffMaps_a','DiffMaps_Z',
+    'Errors','X_new','basic'] # all variables in the database
+ITEM_ADDS = ['/'+x for x in ITEM_LIST] # HDFStore ABSOLUTE path-names
+ATTR_LIST = ['X0',['N','n'],'X_scaled','x_mean','H',
+    'mu','phi',['s_v','c_v','hat_s_v'],'K','b',
+    'g','m','a','Z',
+    'errors','Xnew',None]
+ATTR_MAP = dict(zip(ITEM_ADDS, ATTR_LIST))
+
 class Logfile:
     def __init__(self, logfile_dir = './', logfile_name = 'plom.log', screen_msg = True):
         """
@@ -61,11 +72,13 @@ class DBServer:
             os.remove(self.db_path)
         self.init_time = datetime.utcnow()
         self.item_name_list = []
-        self._basic()
+        self.basic()
         self.dir_export = self._create_export_dir()
+        self._item_list = ITEM_LIST
+        self._item_adds = ITEM_ADDS
             
     
-    def _basic(self):
+    def basic(self):
         """
         Writing basic info
         """
@@ -89,6 +102,13 @@ class DBServer:
             return dir_export
         except:
             return None
+
+
+    def get_item_adds(self):
+        """
+        Returning the full list of data items
+        """
+        return self._item_adds
 
 
     def add_item(self, item_name = None, col_names = None, item = []):
