@@ -16,7 +16,7 @@ import sys
 from general import *
 
 class PLoM:
-    def __init__(self, jobname='plom', data='', separator=',', col_header=False, constraints = None, run_tag = False, plot_tag = True, num_rlz = 5, tol_pca = 1e-6, epsilon_kde = 25):
+    def __init__(self, jobname='plom', data='', separator=',', col_header=False, constraints = None, run_tag = False, plot_tag = False, num_rlz = 5, tol_pca = 1e-6, epsilon_kde = 25):
         # basic setups
         self._basic_config(jobname=jobname)
         # initialize input data
@@ -227,7 +227,14 @@ class PLoM:
                 if cur_var in self.dbserver.get_item_adds() and ATTR_MAP[cur_var]:
                     # read in
                     cur_data = store[cur_var]
-                    self.dbserver.add_item(item_name=cur_var.replace('/',''),col_names=list(cur_data.columns),item=cur_data)
+                    cur_dshape = tuple([x[0] for x in store['/DS_'+cur_var[1:]].values.tolist()])
+                    if cur_dshape==(1,):
+                        item_value = np.array(sum(cur_data.values.tolist(),[]))
+                        col_headers = list(cur_data.columns)[0]
+                    else:
+                        item_value = cur_data.values
+                        col_headers = list(cur_data.columns)
+                    self.dbserver.add_item(item_name=cur_var.replace('/',''),col_names=col_headers,item=item_value,data_shape=cur_dshape)
             store.close()
 
         except:
@@ -261,15 +268,12 @@ class PLoM:
             self.logfile.write_msg(msg='PLoM._sync_data: database is empty - no data to sync.',msg_type='WARNING',msg_level=0)
         else:
             for cur_item in avail_name_list:
+                if cur_item.startswith('/DS_'):
+                    # skipping the data-shape attributes
+                    continue
                 if type(ATTR_MAP[cur_item]) is str:
-                    # only one data group in this data item:
-                    self.__setattr__(ATTR_MAP[cur_item],self.dbserver.get_item(cur_item))
+                    self.__setattr__(ATTR_MAP[cur_item],self.dbserver.get_item(cur_item[1:]))
                     self.logfile.write_msg(msg='PLoM._sync_data: self.{} synced.'.format(ATTR_MAP[cur_item]),msg_type='RUNNING',msg_level=0)
-                elif type(ATTR_MAP[cur_item]) is list:
-                    # multiple data groups
-                    for cur_var in ATTR_MAP[cur_item]:
-                        self.__setattr__(cur_var,self.dbserver.get_item(cur_item).get(cur_var))
-                        self.logfile.write_msg(msg='PLoM._sync_data: self.{} synced.'.format(cur_var),msg_type='RUNNING',msg_level=0)
                 else:
                     # None type (this is the 'basic' - skipped)
                     self.logfile.write_msg(msg='PLoM._sync_data: data {} skipped.'.format(cur_item),msg_type='RUNNING',msg_level=0)
@@ -281,9 +285,12 @@ class PLoM:
         """
         try:
             self._load_h5_plom(filename)
+            self.logfile.write_msg(msg='PLoM.load_h5: h5 file loaded.',msg_type='RUNNING',msg_level=0)
             # sync data
             self._sync_data()
+            self.logfile.write_msg(msg='PLoM.load_h5: h5 loaded synced.',msg_type='RUNNING',msg_level=0)
             if '/X0' in self.dbserver.get_name_list():
+                self.X0 = self.dbserver.get_item('X0',table_like=True)
                 return self.X0.to_numpy()
             else:
                 self.logfile.write_msg(msg='PLoM.load_h5: the original X0 data not found in the loaded data.',msg_type='ERROR',msg_level=0)
@@ -323,13 +330,72 @@ class PLoM:
             return 1
 
         # Save to database
-        self.dbserver.add_item(item_name = 'X0', col_names = list(self.X0.columns), item = self.X.T)
-        self.dbserver.add_item(item_name = 'X0_size', col_names = ['N', 'n'], item = np.array([[self.N,self.n]]))
+        self.dbserver.add_item(item_name = 'X0', col_names = list(self.X0.columns), item = self.X.T, data_shape=self.X.shape)
+        self.dbserver.add_item(item_name = 'N', item = np.array([self.N]))
+        self.dbserver.add_item(item_name = 'n', item = np.array([self.n]))
         self.logfile.write_msg(msg='PLoM.initialize_data: current X0 size = ({}, {}).'.format(self.N,self.n),msg_type='RUNNING',msg_level=0)
         self.logfile.write_msg(msg='PLoM.initialize_data: X0 and X0_size saved to database.',msg_type='RUNNING',msg_level=0)
 
         return 0
 
+
+    def _init_indv_tasks(self):
+        """
+        Initializing tasks
+        """
+        for cur_task in FULL_TASK_LIST:
+            self.__setattr__('task_'+cur_task, Task(task_name=cur_task))
+
+
+    def ConfigTasks(self, task_list = FULL_TASK_LIST):
+        """
+        Creating a task list object
+        - task_list: a string list of tasks to run
+        """
+        config_flag = True
+        self.cur_task_list = task_list
+        # check task orders
+        if not all([x in FULL_TASK_LIST for x in self.cur_task_list]):
+            self.logfile.write_msg(msg='PLoM.config_tasks: task name not recognized.',msg_type='ERROR',msg_level=0)
+            self.logfile.write_msg(msg='PLoM.config_tasks: acceptable task names: {}.'.format(','.join(FULL_TASK_LIST)),msg_type='WARNING',msg_level=0)
+            return False
+        map_order = [FULL_TASK_LIST.index(x) for x in self.cur_task_list]
+        if map_order != sorted(map_order):
+            self.logfile.write_msg(msg='PLoM.config_tasks: task order error.',msg_type='ERROR',msg_level=0)
+            self.logfile.write_msg(msg='PLoM.config_tasks: please follow this order: {}.'.format('->'.join(FULL_TASK_LIST)),msg_type='WARNING',msg_level=0)
+            return False
+        if (max(map_order)-min(map_order)+1) != len(map_order):
+            # intermediate tasks missing -> since the jobs are in chain, so here the default is to automatically fill in any missing tasks in the middle
+            self.cur_task_list = FULL_TASK_LIST[min(map_order):max(map_order)+1]
+            self.logfile.write_msg(msg='PLoM.config_tasks: intermediate task(s) missing and being filled in automatically.',msg_type='WARNING',msg_level=0)
+            self.logfile.write_msg(msg='PLoM.config_tasks: the filled task list is: {}.'.format('->'.join(self.cur_task_list)),msg_type='RUNNING',msg_level=0)
+        # intializing the task list       
+        self.task_list = TaskList()
+        # intializing individual tasks and refreshing status
+        self._init_indv_tasks()
+        for cur_task in FULL_TASK_LIST:
+            self.__getattribute__('task_'+cur_task).full_var_list = TASK_ITEM_MAP[cur_task]
+            for cur_item in TASK_ITEM_MAP[cur_task]:
+                if '/'+cur_item in self.dbserver.get_name_list():
+                    self.__getattribute__('task_'+cur_task).avail_var_list.append(cur_item)
+                self.__getattribute__('task_'+cur_task).refresh_status()
+        # create the task list
+        for cur_task in self.cur_task_list:
+            self.task_list.add_task(new_task=self.__getattribute__('task_'+cur_task))
+        
+        self.task_list.refresh_status()
+        # need to check the task chain if all dependent tasks completed to go
+        # otherwise, the current run could not be completed
+        pre_task_list = FULL_TASK_LIST[:FULL_TASK_LIST.index(self.cur_task_list[0])]
+        if len(pre_task_list):
+            for cur_task in pre_task_list:
+                if not self.__getattribute__('task_'+cur_task).refresh_status():
+                    config_flag = False
+                    self.logfile.write_msg(msg='PLoM.config_tasks: configuration failed with dependent task {} not completed.'.format(cur_task),msg_type='ERROR',msg_level=0)
+
+        if config_flag:
+            self.logfile.write_msg(msg='PLoM.config_tasks: the following tasks is configured to run: {}.'.format('->'.join(self.cur_task_list)),msg_type='RUNNING',msg_level=0)
+        
 
     def RunAlgorithm(self, n_mc = 5, epsilon_pca = 1e-6, epsilon_kde = 25, tol_PCA2 = 1e-5, tol = 1e-6, max_iter = 50):
         """
@@ -341,38 +407,130 @@ class PLoM:
         - max_iter: maximum number of iterations of the PLoM algorithm
         """
 
+        cur_task = self.task_list.head_task
+        while cur_task:
+            if cur_task.task_name == 'DataNormalization':
+                self.__getattribute__('task_'+cur_task.task_name).avail_var_list = []
+                #data normalization
+                self.X_scaled, self.alpha, self.x_min, self.x_mean = self.DataNormalization(self.X)
+                self.logfile.write_msg(msg='PLoM.RunAlgorithm: data normalization completed.',msg_type='RUNNING',msg_level=0)
+                self.dbserver.add_item(item_name = 'X_range', item = self.alpha, data_shape=self.alpha.shape)
+                self.dbserver.add_item(item_name = 'X_min', col_names = list(self.X0.columns), item = self.x_min.T, data_shape=self.x_min.shape)
+                self.dbserver.add_item(item_name = 'X_scaled', col_names = list(self.X0.columns), item = self.X_scaled.T, data_shape=self.X_scaled.shape)
+                self.dbserver.add_item(item_name = 'X_scaled_mean', col_names = list(self.X0.columns), item = self.x_mean.T, data_shape=self.x_mean.shape)
+                self.logfile.write_msg(msg='PLoM.RunAlgorithm: X_range, X_min, X_scaled and X_scaled_mean saved.',msg_type='RUNNING',msg_level=0)
+            elif cur_task.task_name == 'RunPCA':
+                self.__getattribute__('task_'+cur_task.task_name).avail_var_list = []
+                #PCA
+                self.H, self.mu, self.phi, self.nu = self.RunPCA(self.X_scaled, epsilon_pca)
+                self.logfile.write_msg(msg='PLoM.RunAlgorithm: PCA completed.',msg_type='RUNNING',msg_level=0)
+                self.dbserver.add_item(item_name = 'X_PCA', col_names = ['Component'+str(i+1) for i in range(self.H.shape[0])], item = self.H.T, data_shape=self.H.shape)
+                self.dbserver.add_item(item_name = 'EigenValue_PCA', item = self.mu, data_shape=self.mu.shape)
+                self.dbserver.add_item(item_name = 'EigenVector_PCA', col_names = ['V'+str(i+1) for i in range(self.phi.shape[1])], item = self.phi, data_shape=self.phi.shape)
+                self.dbserver.add_item(item_name = 'NumComp_PCA', item = np.array([self.nu]))
+                self.logfile.write_msg(msg='PLoM.RunAlgorithm: X_PCA, EigenValue_PCA and EigenVector_PCA saved.',msg_type='RUNNING',msg_level=0)
+            elif cur_task.task_name == 'RunKDE':
+                self.__getattribute__('task_'+cur_task.task_name).avail_var_list = []
+                #parameters KDE
+                self.s_v, self.c_v, self.hat_s_v, self.K, self.b = self.RunKDE(self.H, epsilon_kde)
+                self.logfile.write_msg(msg='PLoM.RunAlgorithm: kernel density estimation completed.',msg_type='RUNNING',msg_level=0)
+                self.dbserver.add_item(item_name = 's_v', item = np.array([self.s_v]))
+                self.dbserver.add_item(item_name = 'c_v', item = np.array([self.c_v]))
+                self.dbserver.add_item(item_name = 'hat_s_v', item = np.array([self.hat_s_v]))
+                self.dbserver.add_item(item_name = 'X_KDE', item = self.K, data_shape=self.K.shape)
+                self.dbserver.add_item(item_name = 'EigenValues_KDE', item = self.b, data_shape=self.b.shape)
+                self.logfile.write_msg(msg='PLoM.RunAlgorithm: KDE, X_KDE and EigenValues_KDE saved.',msg_type='RUNNING',msg_level=0)
+            elif cur_task.task_name == 'DiffMaps':
+                self.__getattribute__('task_'+cur_task.task_name).avail_var_list = []
+                #diff maps
+                self.g, self.m, self.a, self.Z = self.DiffMaps(self.H, self.K, self.b)
+                self.logfile.write_msg(msg='PLoM.RunAlgorithm: diffusion maps completed.',msg_type='RUNNING',msg_level=0)
+                self.dbserver.add_item(item_name = 'DiffMaps_g', item = self.g, data_shape=self.g.shape)
+                self.dbserver.add_item(item_name = 'DiffMaps_m', item = np.array([self.m]))
+                self.dbserver.add_item(item_name = 'DiffMaps_a', item = self.a, data_shape=self.a.shape)
+                self.dbserver.add_item(item_name = 'DiffMaps_Z', item = self.Z, data_shape=self.Z.shape)
+                self.logfile.write_msg(msg='PLoM.RunAlgorithm: DiffMaps_g, DiffMaps_m, DiffMaps_a and DiffMaps_Z saved.',msg_type='RUNNING',msg_level=0)
+            elif cur_task.task_name == 'ISDEGeneration':
+                self.__getattribute__('task_'+cur_task.task_name).avail_var_list = []
+                #ISDE generation
+                self.ISDEGeneration(n_mc = n_mc, tol_PCA2 = tol_PCA2, tol = tol, max_iter = max_iter)
+                self.logfile.write_msg(msg='PLoM.RunAlgorithm: Realizations generated.',msg_type='RUNNING',msg_level=0)
+                self.dbserver.add_item(item_name = 'X_new', col_names = list(self.X0.columns), item = self.Xnew.T, data_shape=self.Xnew.shape)
+                self.logfile.write_msg(msg='PLoM.RunAlgorithm: X_new saved.',msg_type='RUNNING',msg_level=0)
+            else:
+                self.logfile.write_msg(msg='PLoM.RunAlgorithm: task {} not found.'.format(cur_task.task_name),msg_type='ERROR',msg_level=0)
+                break
+            # refresh status
+            for cur_item in TASK_ITEM_MAP[cur_task.task_name]:
+                if '/'+cur_item in self.dbserver.get_name_list():
+                    self.__getattribute__('task_'+cur_task.task_name).avail_var_list.append(cur_item)
+            if not cur_task.refresh_status():
+                self.logfile.write_msg(msg='PLoM.RunAlgorithm: simulation stopped with task {} not fully completed.'.format(cur_task.task_name),msg_type='ERROR',msg_level=0)
+                break
+            # move to the next task
+            cur_task = cur_task.next_task
+
+        if self.task_list.refresh_status():
+            self.logfile.write_msg(msg='PLoM.RunAlgorithm: simulation completed with task(s) {} done.'.format('->'.join(self.cur_task_list)),msg_type='RUNNING',msg_level=0)
+        else:
+            self.logfile.write_msg(msg='PLoM.RunAlgorithm: simulation not fully completed.',msg_type='ERROR',msg_level=0)
+
+
+    def DataNormalization(self, X):
+        """
+        Normalizing the X 
+        - X: the data matrix to be normalized
+        """
         #scaling
-        self.X_scaled, self.alpha, self.x_min = plom.scaling(self.X)
-        self.x_mean = plom.mean(self.X_scaled)
-        self.logfile.write_msg(msg='PLoM.RunAlgorithm: data normalization completed.',msg_type='RUNNING',msg_level=0)
-        self.dbserver.add_item(item_name = 'X_scaled', col_names = list(self.X0.columns), item = self.X_scaled.T)
-        self.dbserver.add_item(item_name = 'X_scaled_mean', col_names = list(self.X0.columns), item = self.x_mean.T)
-        self.logfile.write_msg(msg='PLoM.RunAlgorithm: X_scaled and X_scaled_mean saved.',msg_type='RUNNING',msg_level=0)
+        X_scaled, alpha, x_min = plom.scaling(X)
+        x_mean = plom.mean(X_scaled)
+        
+        return X_scaled, alpha, x_min, x_mean
 
-        #PCA
-        self.H, self.mu, self.phi, self.nu = self._Hreduction(self.X_scaled, epsilon_pca)
-        self.logfile.write_msg(msg='PLoM.RunAlgorithm: PCA completed.',msg_type='RUNNING',msg_level=0)
-        self.dbserver.add_item(item_name = 'X_PCA', col_names = ['Component'+str(i+1) for i in range(self.H.shape[0])], item = self.H.T)
-        self.dbserver.add_item(item_name = 'EigenValue_PCA', col_names = 'EigenValue_PCA', item = self.mu)
-        self.dbserver.add_item(item_name = 'EigenVector_PCA', col_names = ['V'+str(i+1) for i in range(self.phi.shape[1])], item = self.phi)
-        self.logfile.write_msg(msg='PLoM.RunAlgorithm: X_PCA, EigenValue_PCA and EigenVector_PCA saved.',msg_type='RUNNING',msg_level=0)
 
-        #parameters KDE
-        (self.s_v, self.c_v, self.hat_s_v) = plom.parameters_kde(self.H)
-        self.K, self.b = plom.K(self.H, epsilon_kde)
-        self.logfile.write_msg(msg='PLoM.RunAlgorithm: kernel density estimation completed.',msg_type='RUNNING',msg_level=0)
-        self.dbserver.add_item(item_name = 'KDE', col_names = ['s_v','c_v','hat_s_v'], item = np.array([[self.s_v,self.c_v,self.hat_s_v]]))
-        self.dbserver.add_item(item_name = 'X_KDE', item = self.K)
-        self.dbserver.add_item(item_name = 'EigenValues_KDE', item = self.b)
+    def RunPCA(self, X_origin, epsilon_pca):
+        #...PCA...
+        (H, mu, phi) = plom.PCA(X_origin, epsilon_pca)
+        nu = len(H)
+        self.logfile.write_msg(msg='PLoM.RunPCA: considered number of PCA components = {}'.format(nu),msg_type='RUNNING',msg_level=0)
+        return H, mu, phi, nu
 
-        #diff maps
-        self.g, self.m, self.a, self.Z = self._DiffMaps(self.H, self.K, self.b)
-        self.logfile.write_msg(msg='PLoM.RunAlgorithm: diffusion maps completed.',msg_type='RUNNING',msg_level=0)
-        self.dbserver.add_item(item_name = 'DiffMaps_g', item = self.g)
-        self.dbserver.add_item(item_name = 'DiffMaps_m', item = np.array([self.m]))
-        self.dbserver.add_item(item_name = 'DiffMaps_a', item = self.a)
-        self.dbserver.add_item(item_name = 'DiffMaps_Z', item = self.Z)
 
+    def RunKDE(self, X, epsilon_kde):
+        """
+        Running Kernel Density Estimation
+        - X: the data matrix to be reduced
+        - epsilon_kde: smoothing parameter in the kernel density estimation
+        """
+        (s_v, c_v, hat_s_v) = plom.parameters_kde(X)
+        K, b = plom.K(X, epsilon_kde)
+        
+        return s_v, c_v, hat_s_v, K, b 
+
+
+    def DiffMaps(self, H, K, b):
+        #..diff maps basis...
+        #self.Z = PCA(self.H)
+        try:
+            g, eigenvalues = plom.g(K, b) #diffusion maps
+            g = g.real
+            m = plom.m(eigenvalues)
+            a = g[:,0:m].dot(np.linalg.inv(np.transpose(g[:,0:m]).dot(g[:,0:m])))
+            Z = H.dot(a)
+        except:
+            g = None
+            m = 0
+            a = None
+            Z = None
+            self.logfile.write_msg(msg='PLoM.DiffMaps: diffusion maps failed.',msg_type='ERROR',msg_level=0)
+
+        return g, m, a, Z
+
+
+    def ISDEGeneration(self, n_mc = 5, tol_PCA2 = 1e-5, tol = 1e-6, max_iter = 50):
+        """
+        The construction of a nonlinear Ito Stochastic Differential Equation (ISDE) to generate realizations of random variable H
+        """
         #constraints
         if self.g_c:
 
@@ -394,9 +552,7 @@ class PLoM:
             self.Y = nu_init.dot(self.a)
 
             while (iteration < max_iter and self.errors[iteration] > tol):
-                self.logfile.write_msg(msg='PLoM.RunAlgorithm: Running iteration {}.'.format(iteration+1),msg_type='RUNNING',msg_level=0)
-
-
+                self.logfile.write_msg(msg='PLoM.ISDEGeneration: running iteration {}.'.format(iteration+1),msg_type='RUNNING',msg_level=0)
                 Hnewvalues, nu_lambda, x_, x_2 = plom.generator(self.Z, self.Y, self.a,\
                                             n_mc, self.x_mean, self.H, self.s_v,\
                                             self.hat_s_v, self.mu, self.phi,\
@@ -416,10 +572,10 @@ class PLoM:
                 (self.errors).append(plom.err(self.gradient, self.b_c))
             
             #saving data
-            self.dbserver.add_item(item_name = 'Errors', item = np.array(self.errors))
+            self.dbserver.add_item(item_name = 'Errors', item = np.array(self.errors), data_shape=np.array(self.errors).shape)
 
             if iteration == max_iter:
-                self.logfile.write_msg(msg='PLoM.RunAlgorithm: Max. iteration reached and convergence not achieved.',msg_type='WARNING',msg_level=0) 
+                self.logfile.write_msg(msg='PLoM.ISDEGeneration: max. iteration reached and convergence not achieved.',msg_type='WARNING',msg_level=0) 
 
         #no constraints
         else:
@@ -429,42 +585,13 @@ class PLoM:
                                         n_mc, self.x_mean, self.H, self.s_v,\
                                         self.hat_s_v, self.mu, self.phi,\
                                         self.g[:,0:self.m]) #solve the ISDE in n_mc iterations
+            self.logfile.write_msg(msg='PLoM.ISDEGeneration: new generations are simulated.',msg_type='RUNNING',msg_level=0)
+            self.dbserver.add_item(item_name = 'Errors', item = np.array([0]))
 
         self.Xnew = self.x_mean + self.phi.dot(np.diag(self.mu)).dot(Hnewvalues)
         
         #unscale
         self.Xnew = np.diag(self.alpha).dot(self.Xnew)+self.x_min
-
-        self.logfile.write_msg(msg='PLoM.RunAlgorithm: Realizations generated.',msg_type='RUNNING',msg_level=0)
-        self.dbserver.add_item(item_name = 'X_new', col_names = list(self.X0.columns), item = self.Xnew.T)
-        self.logfile.write_msg(msg='PLoM.RunAlgorithm: X_new saved.',msg_type='RUNNING',msg_level=0)
-
-
-    def _Hreduction(self, X_origin, epsilon_pca):
-        #...PCA...
-        (H, mu, phi) = plom.PCA(X_origin, epsilon_pca)
-        nu = len(H)
-        self.logfile.write_msg(msg='PLoM._Hreduction: considered number of PCA components = {}'.format(nu),msg_type='RUNNING',msg_level=0)
-        return H, mu, phi, nu
-
-
-    def _DiffMaps(self, H, K, b):
-        #..diff maps basis...
-        #self.Z = PCA(self.H)
-        try:
-            g, eigenvalues = plom.g(K, b) #diffusion maps
-            g = g.real
-            m = plom.m(eigenvalues)
-            a = g[:,0:m].dot(np.linalg.inv(np.transpose(g[:,0:m]).dot(g[:,0:m])))
-            Z = H.dot(a)
-        except:
-            g = None
-            m = 0
-            a = None
-            Z = None
-            self.logfile.write_msg(msg='PLoM.__DiffMaps: diffusion maps failed.',msg_type='ERROR',msg_level=0)
-
-        return g, m, a, Z
 
     
     def export_results(self, data_list = [], file_format_list = ['csv']):
