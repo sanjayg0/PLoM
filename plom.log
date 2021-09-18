@@ -1,0 +1,21 @@
+
+2021-09-18 16:06:00.125345  RUNNING-MSG --NEW LOG STARTING FROM THIS LINE-- 
+2021-09-18 16:06:00.125743  RUNNING-MSG PLoM: Running directory /home/prestamo/Documents/PLoM/plom initialized. 
+2021-09-18 16:06:00.513960  RUNNING-MSG PLoM: database server initialized. 
+2021-09-18 16:06:00.514402  RUNNING-MSG PLoM: visualization folder /home/prestamo/Documents/PLoM/plom/FigOut initialized. 
+2021-09-18 16:06:00.531103  RUNNING-MSG PLoM.load_data: loaded data size = (300, 20). 
+2021-09-18 16:06:00.559471  RUNNING-MSG PLoM.initialize_data: current X0 size = (300, 20). 
+2021-09-18 16:06:00.559654  RUNNING-MSG PLoM.initialize_data: X0 and X0_size saved to database. 
+2021-09-18 16:06:00.559768  WARNING-MSG PLoM.add_constraints: no user-defined constraint - please use add_constraints(constraints_file=X) to add new constraints if any. 
+2021-09-18 16:06:00.559857  RUNNING-MSG PLoM: using RunAlgorithm(n_mc=n_mc,epsilon_pca=epsilon_pca,epsilon_kde) to run simulations. 
+2021-09-18 16:06:03.783952  RUNNING-MSG PLoM.add_constraints: constraints added. 
+2021-09-18 16:06:07.149747  RUNNING-MSG PLoM.RunAlgorithm: data normalization completed. 
+2021-09-18 16:06:07.188849  RUNNING-MSG PLoM.RunAlgorithm: X_scaled and X_scaled_mean saved. 
+2021-09-18 16:06:10.462103  RUNNING-MSG PLoM._Hreduction: considered number of PCA components = 19 
+2021-09-18 16:06:10.462684  RUNNING-MSG PLoM.RunAlgorithm: PCA completed. 
+2021-09-18 16:06:10.516497  RUNNING-MSG PLoM.RunAlgorithm: X_PCA, EigenValue_PCA and EigenVector_PCA saved. 
+2021-09-18 16:06:12.637518  RUNNING-MSG PLoM.RunAlgorithm: kernel density estimation completed. 
+2021-09-18 16:06:12.923413  RUNNING-MSG PLoM.RunAlgorithm: diffusion maps completed. 
+2021-09-18 16:06:13.126593  RUNNING-MSG PLoM.RunAlgorithm: Running iteration 1. 
+2021-09-18 16:06:23.233806  RUNNING-MSG PLoM.RunAlgorithm: Running iteration 2. 
+2021-09-18 16:06:33.210805  RUNNING-MSG PLoM.RunAlgorithm: Running iteration 3. 

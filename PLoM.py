@@ -354,7 +354,7 @@ class PLoM:
         self.logfile.write_msg(msg='PLoM.RunAlgorithm: PCA completed.',msg_type='RUNNING',msg_level=0)
         self.dbserver.add_item(item_name = 'X_PCA', col_names = ['Component'+str(i+1) for i in range(self.H.shape[0])], item = self.H.T)
         self.dbserver.add_item(item_name = 'EigenValue_PCA', col_names = 'EigenValue_PCA', item = self.mu)
-        self.dbserver.add_item(item_name = 'EigenVector_PCA', col_names = ['V'+str(i+1) for i in range(self.phi.shape[0])], item = self.phi)
+        self.dbserver.add_item(item_name = 'EigenVector_PCA', col_names = ['V'+str(i+1) for i in range(self.phi.shape[1])], item = self.phi)
         self.logfile.write_msg(msg='PLoM.RunAlgorithm: X_PCA, EigenValue_PCA and EigenVector_PCA saved.',msg_type='RUNNING',msg_level=0)
 
         #parameters KDE
