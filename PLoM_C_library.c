@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 
+
 double sq_norm(double *x, int nu, double *y, double s_v, double hat_s_v, int j) {
   double sq_norm = 0;
   for (int i = 0; i < nu; ++i){
@@ -14,9 +15,9 @@ double rho(double *y, double *eta, int nu, int N, double s_v, double hat_s_v){
   double rho_ = 0;
   for (int j = 0; j < N; ++j) {
     double exponential = exp(-0.5*sq_norm(eta, nu, y, s_v, hat_s_v, j)/(pow(hat_s_v,2)));
-    rho_ += exponential/N;
+    rho_ += exponential;
   }
-  return rho_;
+  return rho_/N;
 }
 
 double *gradient_rho(double * gradient, double *y, double *eta, int nu, int N, double s_v, double hat_s_v){
