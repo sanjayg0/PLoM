@@ -666,12 +666,12 @@ class PLoM:
                     except:
                         ff_i = file_format_list[-1]
                     ex_flag = self.dbserver.export(data_name = data_i, file_format = ff_i)
-                    if ex_flag == 1:
+                    if type(ex_flag) == int and ex_flat == 1:
                         self.logfile.write_msg(msg='PLoM.export_results: {} is not found and skipped.'.format(data_i),msg_type='WARNING',msg_level=0)
-                    elif ex_flag == 2:
+                    elif type(ex_flag) == int and ex_flag == 2:
                         self.logfile.write_msg(msg='PLoM.export_results: {} is not supported yest.'.format(ff_i),msg_type='ERROR',msg_level=0)
                     else:
-                        self.logfile.write_msg(msg='PLoM.export_results: {} is exported in {}.'.format(data_i,self.dbserver.dir_export),msg_type='RUNNING',msg_level=0)
+                        self.logfile.write_msg(msg='PLoM.export_results: {} is exported in {}.'.format(data_i,ex_flag),msg_type='RUNNING',msg_level=0)
 
 
     def PostProcess():

@@ -227,7 +227,7 @@ class DBServer:
         - data_name: data tag
         - format: data format
         """
-        d = self.get_item(item_name = data_name)
+        d = self.get_item(item_name = data_name[1:], table_like=True)
         if d is None:
             return 1
         if filename is None:
@@ -241,7 +241,7 @@ class DBServer:
                 json.dump(d, f)
         else:
             return 2
-        return 0
+        return filename
 
 
     def convert_format(self, item_name = None, cvt_task = None):
