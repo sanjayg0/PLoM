@@ -79,7 +79,7 @@ class PLoM:
     
     def add_constraints(self, constraints_file = None):
 
-        if constraints_file is None:
+        if not constraints_file:
             self.g_c = None
             self.D_x_g_c = None
             self.beta_c = []
@@ -423,7 +423,7 @@ class PLoM:
             self.logfile.write_msg(msg='PLoM.config_tasks: the following tasks is configured to run: {}.'.format('->'.join(self.cur_task_list)),msg_type='RUNNING',msg_level=0)
         
 
-    def RunAlgorithm(self, n_mc = 5, epsilon_pca = 1e-6, epsilon_kde = 25, tol_PCA2 = 1e-5, tol = 1e-6, max_iter = 50, plot_tag = False):
+    def RunAlgorithm(self, n_mc = 5, epsilon_pca = 1e-6, epsilon_kde = 25, tol_PCA2 = 1e-5, tol = 1e-6, max_iter = 50, plot_tag = False, runDiffMaps = True):
         """
         Running the PLoM algorithm to train the model and generate new realizations
         - n_mc: realization/sample size ratio
@@ -468,16 +468,28 @@ class PLoM:
                 self.dbserver.add_item(item_name = 'X_KDE', item = self.K, data_shape=self.K.shape)
                 self.dbserver.add_item(item_name = 'EigenValues_KDE', item = self.b, data_shape=self.b.shape)
                 self.logfile.write_msg(msg='PLoM.RunAlgorithm: KDE, X_KDE and EigenValues_KDE saved.',msg_type='RUNNING',msg_level=0)
-            elif cur_task.task_name == 'DiffMaps':
-                self.__getattribute__('task_'+cur_task.task_name).avail_var_list = []
                 #diff maps
-                self.g, self.m, self.a, self.Z = self.DiffMaps(self.H, self.K, self.b)
-                self.logfile.write_msg(msg='PLoM.RunAlgorithm: diffusion maps completed.',msg_type='RUNNING',msg_level=0)
-                self.dbserver.add_item(item_name = 'DiffMaps_g', item = self.g, data_shape=self.g.shape)
-                self.dbserver.add_item(item_name = 'DiffMaps_m', item = np.array([self.m]))
-                self.dbserver.add_item(item_name = 'DiffMaps_a', item = self.a, data_shape=self.a.shape)
-                self.dbserver.add_item(item_name = 'DiffMaps_Z', item = self.Z, data_shape=self.Z.shape)
-                self.logfile.write_msg(msg='PLoM.RunAlgorithm: DiffMaps_g, DiffMaps_m, DiffMaps_a and DiffMaps_Z saved.',msg_type='RUNNING',msg_level=0)
+                if runDiffMaps:
+                    self.__getattribute__('task_'+cur_task.task_name).avail_var_list = []
+                    #diff maps
+                    self.g, self.m, self.a, self.Z = self.DiffMaps(self.H, self.K, self.b)
+                    self.logfile.write_msg(msg='PLoM.RunAlgorithm: diffusion maps completed.',msg_type='RUNNING',msg_level=0)
+                    self.dbserver.add_item(item_name = 'KDE_g', item = self.g, data_shape=self.g.shape)
+                    self.dbserver.add_item(item_name = 'KDE_m', item = np.array([self.m]))
+                    self.dbserver.add_item(item_name = 'KDE_a', item = self.a, data_shape=self.a.shape)
+                    self.dbserver.add_item(item_name = 'KDE_Z', item = self.Z, data_shape=self.Z.shape)
+                    self.logfile.write_msg(msg='PLoM.RunAlgorithm: KDE_g, KDE_m, KDE_a and KDE_Z saved.',msg_type='RUNNING',msg_level=0)
+                else:
+                    self.g = np.identity(self.N)
+                    self.m = self.N
+                    self.a = self.g[:,:self.m].dot(np.linalg.inv(np.transpose(self.g[:,:self.m]).dot(self.g[:,:self.m])))
+                    self.Z = self.H.dot(self.a)
+                    self.logfile.write_msg(msg='PLoM.RunAlgorithm: diffusion map is inactivated.',msg_type='RUNNING',msg_level=0)
+                    self.dbserver.add_item(item_name = 'KDE_g', item = self.g, data_shape=self.g.shape)
+                    self.dbserver.add_item(item_name = 'KDE_m', item = np.array([self.m]))
+                    self.dbserver.add_item(item_name = 'KDE_a', item = self.a, data_shape=self.a.shape)
+                    self.dbserver.add_item(item_name = 'KDE_Z', item = self.Z, data_shape=self.Z.shape)
+                    self.logfile.write_msg(msg='PLoM.RunAlgorithm: KDE_g, KDE_m, KDE_a and KDE_Z saved.',msg_type='RUNNING',msg_level=0)
             elif cur_task.task_name == 'ISDEGeneration':
                 self.__getattribute__('task_'+cur_task.task_name).avail_var_list = []
                 #ISDE generation
