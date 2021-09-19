@@ -16,9 +16,9 @@ import sys
 from general import *
 
 class PLoM:
-    def __init__(self, jobname='plom', data='', separator=',', col_header=False, constraints = None, run_tag = False, plot_tag = False, num_rlz = 5, tol_pca = 1e-6, epsilon_kde = 25):
+    def __init__(self, model_name='plom', data='', separator=',', col_header=False, constraints = None, run_tag = False, plot_tag = False, num_rlz = 5, tol_pca = 1e-6, epsilon_kde = 25):
         # basic setups
-        self._basic_config(jobname=jobname)
+        self._basic_config(model_name=model_name)
         self.plot_tag = plot_tag
         # initialize constraints
         self.constraints = {}
@@ -45,14 +45,14 @@ class PLoM:
             self.logfile.write_msg(msg='PLoM: using RunAlgorithm(n_mc=n_mc,epsilon_pca=epsilon_pca,epsilon_kde) to run simulations.',msg_type='RUNNING',msg_level=0)
 
         
-    def _basic_config(self, jobname=None):
+    def _basic_config(self, model_name=None):
         """
         Basic setups
-        - jobname: job name (used for database name)
+        - model_name: job name (used for database name)
         """
         # initialize log and running directories
         self.dir_log = os.path.join(os.path.expanduser('~/Documents'),'PLoM')
-        self.dir_run = os.path.join(os.path.expanduser('~/Documents'),'PLoM',jobname)
+        self.dir_run = os.path.join(os.path.expanduser('~/Documents'),'PLoM',model_name)
         # initialize logfile
         self.logfile = Logfile(logfile_dir = self.dir_log)
         try:
@@ -63,7 +63,7 @@ class PLoM:
         # initialize database server
         self.dbserver = None
         try:
-            self.dbserver = DBServer(db_dir = self.dir_run, db_name=jobname+'.h5')
+            self.dbserver = DBServer(db_dir = self.dir_run, db_name=model_name+'.h5')
         except:
             self.logfile.write_msg(msg='PLoM: database server initialization failed.',msg_type='ERROR',msg_level=0)
         if self.dbserver:
