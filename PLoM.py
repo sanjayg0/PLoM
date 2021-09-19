@@ -19,6 +19,7 @@ class PLoM:
     def __init__(self, jobname='plom', data='', separator=',', col_header=False, constraints = None, run_tag = False, plot_tag = False, num_rlz = 5, tol_pca = 1e-6, epsilon_kde = 25):
         # basic setups
         self._basic_config(jobname=jobname)
+        self.plot_tag = plot_tag
         # initialize constraints
         self.constraints = {}
         self.num_constraints = 0
@@ -27,7 +28,7 @@ class PLoM:
             self.logfile.write_msg(msg='PLoM: data loading failed.',msg_type='ERROR',msg_level=0)
         else:
             # plot data matrix
-            if plot_tag:
+            if self.plot_tag:
                 smp = pd.plotting.scatter_matrix(self.X0, alpha=0.5, diagonal ='kde', figsize=(10,10))
                 for ax in smp.ravel():
                     ax.set_xlabel(ax.get_xlabel(), fontsize = 6, rotation = 45)
@@ -422,7 +423,7 @@ class PLoM:
             self.logfile.write_msg(msg='PLoM.config_tasks: the following tasks is configured to run: {}.'.format('->'.join(self.cur_task_list)),msg_type='RUNNING',msg_level=0)
         
 
-    def RunAlgorithm(self, n_mc = 5, epsilon_pca = 1e-6, epsilon_kde = 25, tol_PCA2 = 1e-5, tol = 1e-6, max_iter = 50):
+    def RunAlgorithm(self, n_mc = 5, epsilon_pca = 1e-6, epsilon_kde = 25, tol_PCA2 = 1e-5, tol = 1e-6, max_iter = 50, plot_tag = False):
         """
         Running the PLoM algorithm to train the model and generate new realizations
         - n_mc: realization/sample size ratio
@@ -432,6 +433,8 @@ class PLoM:
         - max_iter: maximum number of iterations of the PLoM algorithm
         """
 
+        if plot_tag:
+            self.plot_tag = plot_tag
         cur_task = self.task_list.head_task
         while cur_task:
             if cur_task.task_name == 'DataNormalization':
@@ -518,6 +521,17 @@ class PLoM:
         (H, mu, phi) = plom.PCA(X_origin, epsilon_pca)
         nu = len(H)
         self.logfile.write_msg(msg='PLoM.RunPCA: considered number of PCA components = {}'.format(nu),msg_type='RUNNING',msg_level=0)
+        if self.plot_tag:
+            fig, ax = plt.subplots(figsize=(8,6))
+            ctp = ax.contourf(plom.covariance(H), cmap=plt.cm.bone, levels=100)
+            ax.set_xticks(list(range(nu)))
+            ax.set_yticks(list(range(nu)))
+            ax.set_xticklabels(['PCA-'+str(x+1) for x in range(nu)], fontsize=8, rotation=45)
+            ax.set_yticklabels(['PCA-'+str(x+1) for x in range(nu)], fontsize=8, rotation=45)
+            ax.set_title('Covariance matrix of PCA')
+            cbar = fig.colorbar(ctp)
+            plt.savefig(os.path.join(self.vl_path,'PCA_CovarianceMatrix.png'),dpi=480)
+            self.logfile.write_msg(msg='PLoM: {} saved in {}.'.format('PCA_CovarianceMatrix.png',self.vl_path),msg_type='RUNNING',msg_level=0)
         return H, mu, phi, nu
 
 
@@ -542,6 +556,14 @@ class PLoM:
             m = plom.m(eigenvalues)
             a = g[:,0:m].dot(np.linalg.inv(np.transpose(g[:,0:m]).dot(g[:,0:m])))
             Z = H.dot(a)
+            if self.plot_tag:
+                fig, ax = plt.subplots(figsize=(6,4))
+                ax.semilogy(np.arange(len(eigenvalues)), eigenvalues)
+                ax.set_xlabel('Eigen number')
+                ax.set_ylabel('Eigen value')
+                ax.set_title('Eigen value (KDE)')
+                plt.savefig(os.path.join(self.vl_path,'KDE_EigenValue.png'),dpi=480)
+                self.logfile.write_msg(msg='PLoM: {} saved in {}.'.format('KDE_EigenValue.png',self.vl_path),msg_type='RUNNING',msg_level=0)
         except:
             g = None
             m = 0
