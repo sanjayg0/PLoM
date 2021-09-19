@@ -19,6 +19,9 @@ class PLoM:
     def __init__(self, jobname='plom', data='', separator=',', col_header=False, constraints = None, run_tag = False, plot_tag = False, num_rlz = 5, tol_pca = 1e-6, epsilon_kde = 25):
         # basic setups
         self._basic_config(jobname=jobname)
+        # initialize constraints
+        self.constraints = {}
+        self.num_constraints = 0
         # initialize input data
         if self.initialize_data(data, separator, col_header):
             self.logfile.write_msg(msg='PLoM: data loading failed.',msg_type='ERROR',msg_level=0)
@@ -31,11 +34,9 @@ class PLoM:
                     ax.set_ylabel(ax.get_ylabel(), fontsize = 6, rotation = 45)
                 plt.savefig(os.path.join(self.vl_path,'ScatterMatrix_X0.png'),dpi=480)
                 self.logfile.write_msg(msg='PLoM: {} saved in {}.'.format('ScatterMatrix_X0.png',self.vl_path),msg_type='RUNNING',msg_level=0)
-        # initialize constraints
-        self.constraints = {}
-        self.num_constraints = 0
-        if self.add_constraints(constraints_file=constraints):
-            self.logfile.write_msg(msg='PLoM: constraints input failed.',msg_type='ERROR',msg_level=0)
+        if not self.constraints: 
+            if self.add_constraints(constraints_file=constraints):
+                self.logfile.write_msg(msg='PLoM: constraints input failed.',msg_type='ERROR',msg_level=0)
         # run
         if run_tag:
             self.RunAlgorithm(n_mc = num_rlz, epsilon_pca = tol_pca, epsilon_kde = epsilon_kde)
@@ -108,6 +109,7 @@ class PLoM:
         self.D_x_g_c = new_constraints.D_x_g_c
         self.beta_c = new_constraints.beta_c()
         self.logfile.write_msg(msg='PLoM.add_constraints: constraints added.',msg_type='RUNNING',msg_level=0)
+        self.dbserver.add_item(item=[constraints_file],data_type='ConstraintsFile')
         return 0
 
 
@@ -123,6 +125,7 @@ class PLoM:
             self.g_c = self.constraints.get('Constraint'+str(constraint_tag)).get('g_c')
             self.D_x_g_c = self.constraints.get('Constraint'+str(constraint_tag)).get('D_x_g_c')
             self.beta_c = self.constraints.get('Constraint'+str(constraint_tag)).get('beta_c')
+            self.dbserver.add_item(item=[self.constraints.get('Constraint'+str(constraint_tag)).get('filename')],data_type='ConstraintsFile')
         except:
             self.logfile.write_msg(msg='PLoM.get_constraints: cannot get constraints',msg_type='ERROR',msg_level=0)
 
@@ -135,6 +138,7 @@ class PLoM:
         self.g_c = None
         self.D_x_g_c = None
         self.beta_c = []
+        self.dbserver.add_item(item=[''],data_type='ConstraintsFile')
 
 
     def load_data(self, filename, separator=',', col_header=False):
@@ -235,6 +239,10 @@ class PLoM:
                         item_value = cur_data.values
                         col_headers = list(cur_data.columns)
                     self.dbserver.add_item(item_name=cur_var.replace('/',''),col_names=col_headers,item=item_value,data_shape=cur_dshape)
+                # constraints
+                if cur_var == '/constraints_file':
+                    cur_data = store[cur_var]
+                    self.dbserver.add_item(item=cur_data.values.tolist()[0],data_type='ConstraintsFile')
             store.close()
 
         except:
@@ -278,6 +286,21 @@ class PLoM:
                     # None type (this is the 'basic' - skipped)
                     self.logfile.write_msg(msg='PLoM._sync_data: data {} skipped.'.format(cur_item),msg_type='RUNNING',msg_level=0)
 
+            
+    def _sync_constraints(self):
+        """
+        Sync constraints from dbserver to the attributes
+        """
+        avail_name_list = self.dbserver.get_name_list()
+        if '/constraints_file' not in avail_name_list:
+            # empty constraints
+            self.logfile.write_msg(msg='PLoM._sync_data: no available constraint to sync.',msg_type='WARNING',msg_level=0)
+        else:
+            # get constraints file path
+            cfile = self.dbserver.get_item(data_type='ConstraintsFile')
+            # add the constraints
+            self.add_constraints(constraints_file = cfile)
+
 
     def load_h5(self, filename):
         """
@@ -288,7 +311,9 @@ class PLoM:
             self.logfile.write_msg(msg='PLoM.load_h5: h5 file loaded.',msg_type='RUNNING',msg_level=0)
             # sync data
             self._sync_data()
-            self.logfile.write_msg(msg='PLoM.load_h5: h5 loaded synced.',msg_type='RUNNING',msg_level=0)
+            self.logfile.write_msg(msg='PLoM.load_h5: data in {} synced.'.format(filename),msg_type='RUNNING',msg_level=0)
+            self._sync_constraints()
+            self.logfile.write_msg(msg='PLoM.load_h5: constraints in {} synced.'.format(filename),msg_type='RUNNING',msg_level=0)
             if '/X0' in self.dbserver.get_name_list():
                 self.X0 = self.dbserver.get_item('X0',table_like=True)
                 return self.X0.to_numpy()

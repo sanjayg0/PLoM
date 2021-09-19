@@ -12,10 +12,10 @@ ITEM_LIST_RUNPCA = ['X_PCA','EigenValue_PCA','EigenVector_PCA','NumComp_PCA']
 ITEM_LIST_RUNKDE = ['s_v','c_v','hat_s_v','X_KDE','EigenValues_KDE']
 ITEM_LIST_DIFFMAPS = ['DiffMaps_g','DiffMaps_m','DiffMaps_a','DiffMaps_Z']
 ITEM_LIST_ISDEGENE = ['Errors','X_new']
-ITEM_LIST = ['basic']+['X0','N','n']+ITEM_LIST_DATANORM+ITEM_LIST_RUNPCA \
+ITEM_LIST = ['basic']+['constraints_file']+['X0','N','n']+ITEM_LIST_DATANORM+ITEM_LIST_RUNPCA \
     +ITEM_LIST_RUNKDE+ITEM_LIST_DIFFMAPS+ITEM_LIST_ISDEGENE # all variables in the database
 ITEM_ADDS = ['/'+x for x in ITEM_LIST] # HDFStore ABSOLUTE path-names
-ATTR_LIST = [None,'X','N','n',
+ATTR_LIST = [None,None,'X','N','n',
     'alpha','x_min','X_scaled','x_mean',
     'H','mu','phi','nu',
     's_v','c_v','hat_s_v','K','b',
@@ -104,6 +104,7 @@ class DBServer:
         store = pd.HDFStore(self.db_path, 'a')
         df.to_hdf(store, 'basic', mode='a')
         store.close()
+        self.add_item(item=[''],data_type='ConstraintsFile')
 
 
     def _create_export_dir(self):
@@ -125,47 +126,70 @@ class DBServer:
         return self._item_adds
 
 
-    def add_item(self, item_name = None, col_names = None, item = [], data_shape = None):
+    def add_item(self, item_name = None, col_names = None, item = [], data_shape = None, data_type='Data'):
         """
         Adding a new data item into database
         """
-        if item.size > 1:
-            df = pd.DataFrame(item, columns = col_names)
-            dshape = pd.DataFrame(data_shape, columns=['DS_'+item_name])
-        else:
-            if col_names is None:
-                col_names = item_name
-            df = pd.DataFrame.from_dict({
-                col_names: item.tolist()
-            })
-            dshape = pd.DataFrame.from_dict({
-                'DS_'+col_names: (1,)
-            })
-        if item_name is not None:
+        if data_type == 'Data':
+            if item.size > 1:
+                df = pd.DataFrame(item, columns = col_names)
+                dshape = pd.DataFrame(data_shape, columns=['DS_'+item_name])
+            else:
+                if col_names is None:
+                    col_names = item_name
+                df = pd.DataFrame.from_dict({
+                    col_names: item.tolist()
+                })
+                dshape = pd.DataFrame.from_dict({
+                    'DS_'+col_names: (1,)
+                })
+            if item_name is not None:
+                store = pd.HDFStore(self.db_path, 'a')
+                # data item
+                df.to_hdf(store, item_name, mode='a')
+                # data shape
+                dshape.to_hdf(store, 'DS_'+item_name, mode='a')
+                store.close()
+        elif data_type == 'ConstraintsFile':
+            # constraints filename
+            cf = pd.DataFrame.from_dict({
+                'ConstraintsFile': item
+            }, dtype=str)
             store = pd.HDFStore(self.db_path, 'a')
-            # data item
-            df.to_hdf(store, item_name, mode='a')
-            # data shape
-            dshape.to_hdf(store, 'DS_'+item_name, mode='a')
+            cf.to_hdf(store, 'constraints_file', mode='a')
             store.close()
+        else:
+            # Not supported data_type
+            return False
 
 
-    def get_item(self, item_name = None, table_like=False):
+    def get_item(self, item_name = None, table_like=False, data_type='Data'):
         """
         Getting a specific data item
         """
-        if item_name is not None:
+        if data_type == 'Data':
+            if item_name is not None:
+                store = pd.HDFStore(self.db_path, 'r')
+                try:
+                    item = store.get(item_name)
+                    item_shape = tuple([x[0] for x in self.get_item_shape(item_name=item_name).values.tolist()])
+                    if not table_like:
+                        item = item.to_numpy().reshape(item_shape)                
+                except:
+                    item = None
+                store.close()
+
+                return item
+        elif data_type == 'ConstraintsFile':
             store = pd.HDFStore(self.db_path, 'r')
             try:
-                item = store.get(item_name)
-                item_shape = tuple([x[0] for x in self.get_item_shape(item_name=item_name).values.tolist()])
-                if not table_like:
-                    item = item.to_numpy().reshape(item_shape)                
+                item = store.get('/constraints_file')
             except:
                 item = None
             store.close()
 
-            return item
+            return item.values.tolist()[0][0]
+
 
 
     def get_item_shape(self, item_name = None):
