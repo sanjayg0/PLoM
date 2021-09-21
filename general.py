@@ -241,16 +241,6 @@ class DBServer:
         return filename
 
 
-    def convert_format(self, item_name = None, cvt_task = None):
-        """
-        Converting data format
-        - item_name: data item name
-        - cvt_task: a string of conveting actions
-        """
-        
-
-
-
 class Task:
     """
     This is a class for managering an individual task in 
