@@ -51,12 +51,12 @@ class PLoM:
         - model_name: job name (used for database name)
         """
         # initialize log and running directories
-        self.dir_log = os.path.join(os.path.expanduser('~/Documents'),'PLoM')
-        self.dir_run = os.path.join(os.path.expanduser('~/Documents'),'PLoM',model_name)
+        self.dir_log = os.path.join(os.path.dirname(os.path.abspath(__file__)),'RunDir')
+        self.dir_run = os.path.join(os.path.dirname(os.path.abspath(__file__)),'RunDir',model_name)
         # initialize logfile
-        self.logfile = Logfile(logfile_dir = self.dir_log)
         try:
             os.makedirs(self.dir_run, exist_ok=True)
+            self.logfile = Logfile(logfile_dir = self.dir_log)
             self.logfile.write_msg(msg='PLoM: Running directory {} initialized.'.format(self.dir_run),msg_type='RUNNING',msg_level=0)
         except:
             self.logfile.write_msg(msg='PLoM: Running directory {} cannot be initialized.'.format(self.dir_run),msg_type='ERROR',msg_level=0)
