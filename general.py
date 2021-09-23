@@ -174,7 +174,8 @@ class DBServer:
                         item = item.to_numpy().reshape(item_shape)                
                 except:
                     item = None
-                store.close()
+                finally:
+                    store.close()
 
                 return item
         elif data_type == 'ConstraintsFile':
@@ -183,10 +184,24 @@ class DBServer:
                 item = store.get('/constraints_file')
             except:
                 item = None
-            store.close()
+            finally:
+                store.close()
 
             return item.values.tolist()[0][0]
 
+
+    def remove_item(self, item_name = None):
+        """
+        Removing an item
+        """
+        if item_name is not None:
+            store = pd.HDFStore(self.db_path, 'r')
+            try:
+                store.remove(item_name)
+            except:
+                item = None
+            finally:
+                store.close()
 
 
     def get_item_shape(self, item_name = None):
