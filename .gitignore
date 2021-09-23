@@ -8,3 +8,5 @@ __pycache__/*
 # compiled c library
 *.o
 *.so
+
+plom.log

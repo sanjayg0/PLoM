@@ -1,6 +1,0 @@
-
-2021-09-23 10:04:49.451851  RUNNING-MSG --NEW LOG STARTING FROM THIS LINE-- 
-2021-09-23 10:04:49.452295  RUNNING-MSG PLoM: Running directory /home/javigual/Documents/PLoM/Example0 initialized. 
-2021-09-23 10:04:49.453231  ERROR-MSG PLoM: database server initialization failed. 
-2021-09-23 10:04:49.453365  RUNNING-MSG PLoM: visualization folder /home/javigual/Documents/PLoM/Example0/FigOut initialized. 
-2021-09-23 10:04:49.460335  RUNNING-MSG PLoM.load_data: loaded data size = (300, 20). 
