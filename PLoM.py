@@ -16,7 +16,7 @@ import sys
 from general import *
 
 class PLoM:
-    def __init__(self, model_name='plom', data='', separator=',', col_header=False, constraints = None, run_tag = False, plot_tag = False, num_rlz = 5, tol_pca = 1e-6, epsilon_kde = 25):
+    def __init__(self, model_name='plom', data='', separator=',', col_header=False, constraints = None, run_tag = False, plot_tag = False, num_rlz = 5, tol_pca = 1e-6, epsilon_kde = 25, tol_PCA2 = 1e-5, tol = 1e-6, max_iter = 50, runDiffMaps = True):
         # basic setups
         self._basic_config(model_name=model_name)
         self.plot_tag = plot_tag
@@ -42,7 +42,7 @@ class PLoM:
         if run_tag:
             self.logfile.write_msg(msg='PLoM: Running all steps to generate new samples.',msg_type='RUNNING',msg_level=0)
             self.ConfigTasks()
-            self.RunAlgorithm(n_mc = num_rlz, epsilon_pca = tol_pca, epsilon_kde = epsilon_kde)
+            self.RunAlgorithm(n_mc = num_rlz, epsilon_pca = tol_pca, epsilon_kde = epsilon_kde, tol_PCA2 = tol_PCA2, tol = tol, max_iter = max_iter, plot_tag = plot_tag, runDiffMaps = runDiffMaps)
         else:
             self.logfile.write_msg(msg='PLoM: using ConfigTasks(task_list = FULL_TASK_LIST) to schedule a run.',msg_type='RUNNING',msg_level=0)
             self.logfile.write_msg(msg='PLoM: using RunAlgorithm(n_mc=n_mc,epsilon_pca=epsilon_pca,epsilon_kde) to run simulations.',msg_type='RUNNING',msg_level=0)
