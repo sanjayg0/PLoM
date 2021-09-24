@@ -10,12 +10,12 @@ import os
 from general import Logfile, DBServer
 c_lib = CDLL(os.path.join(os.path.dirname(os.path.abspath(__file__)),"PLoM_C_library.so"))
 c_lib.rho.restype = c_double
+c_lib.rho.argtypes = [np.ctypeslib.ndpointer(dtype=np.float64),
+                        np.ctypeslib.ndpointer(dtype=np.float64),c_int,c_int,c_double,c_double]
 
 
 def rhoctypes(y, eta, nu, N, s_v, hat_s_v):
-    return c_lib.rho(y.ctypes.data_as(c_void_p),\
-                   eta.ctypes.data_as(c_void_p),\
-                   c_int(nu), c_int(N), c_double(s_v), c_double(hat_s_v))
+    return c_lib.rho(np.array(y,np.float64),np.array(eta,np.float64),nu,N,s_v,hat_s_v)
 
 def scaling(x):
     n = x.shape[0]
@@ -194,7 +194,7 @@ def kde(y, eta, s_v = None, c_v = None, hat_s_v = None):
     N = eta.shape[1]
     if s_v == None or c_v == None or hat_s_v == None:
         s_v, c_v, hat_s_v = parameters_kde(eta)
-    return c_v*rhoctypes(y, np.resize(np.transpose(eta),(nu*N,1)),\
+    return c_v*rhoctypes(np.resize(y,(y.shape[0]*y.shape[1],1)), np.resize(np.transpose(eta),(nu*N,1)),\
         nu, N, s_v, hat_s_v)
 
 def PCA2(C_h_hat_eta, beta, tol): #taking only independent constraints
@@ -365,3 +365,7 @@ def gradient_expo(y):
     f = np.zeros((2,1))
     f = -(y-meann)*exp(-0.5*np.transpose(y-meann).dot(y-meann))
     return f
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
