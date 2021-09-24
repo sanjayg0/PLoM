@@ -1,5 +1,5 @@
 # compiled python files/caches
-*/__pycache__/*
+__pycache__/*
 *.pyc
 
 # ipynb_checkpoints
@@ -9,8 +9,4 @@
 *.o
 *.so
 
-# pytest run files
-*/.pytest_cache/*
-
-# RunDir
-RunDir/*
+plom.log
