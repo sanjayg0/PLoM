@@ -660,7 +660,6 @@ class PLoM:
         """
         Exporting results by the data names
         - data_list: list of data names
-        - filename_list: list of output filenames
         - file_format_list: list of output formats
         """
         avail_name_list = self.dbserver.get_name_list()
