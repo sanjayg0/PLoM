@@ -5,7 +5,7 @@ The **PLoM** is an open source python package that implements the algorithm of *
 ## Documentation
 ### General
 * [About](doc/about.md)
-* [Commands](doc/commands.md)
+* [Modules and API](doc/modules.md)
 * [Calculation workflow](doc/calculation-workflow.md)
 * [Continuous integration and testing](doc/testing.md)
 ### Installation
