@@ -1,5 +1,6 @@
+   
 # compiled python files/caches
-*/__pycache__/*
+__pycache__/*
 *.pyc
 
 # ipynb_checkpoints
@@ -9,5 +10,7 @@
 *.o
 *.so
 
-# PLoM RunDir
-RunDir/*
+plom.log
+Example0/FigOut/KDE_EigenValue.png
+Example0/FigOut/PCA_CovarianceMatrix.png
+example/example0_constraints/
