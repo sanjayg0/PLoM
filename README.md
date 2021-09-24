@@ -16,3 +16,5 @@ The **PLoM** is an open source python package that implements the algorithm of *
 * [Example 1: Surrogating MSA of a 12-story RC frame](example/example1/ExampleScript_FullMSA.ipynb)
 * [Example 2: Surrogating IDA of a 12-story RC frame](example/example2/ExampleScript_IDA.ipynb)
 * [Example 3: Application in damage and loss assessment](example/example3/ExampleScript_DL.ipynb)
+
+## Acknowledgement
