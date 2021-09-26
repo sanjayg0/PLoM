@@ -1,6 +1,6 @@
-## Continuous integration and testing for OpenQuake
+## Continuous integration and testing
 
-The full suite of tests for the OpenQuake Engine can be run using `pytest` in the [tests](../tests/) package:
+The full suite of tests can be run using `pytest` in the [tests](../tests/) package:
 
 ```shell
 pytest tests/

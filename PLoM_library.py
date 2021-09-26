@@ -241,7 +241,9 @@ def solve_inverse(matrix):
         return inverse
 
 
-def generator(z_init, y_init, a, n_mc, x_mean, eta, s_v, hat_s_v, mu, phi, g, psi = 0, lambda_i = 0, g_c = 0, D_x_g_c = 0):
+def generator(z_init, y_init, a, n_mc, x_mean, eta, s_v, hat_s_v, mu, phi, g, psi = 0, lambda_i = 0, g_c = 0, D_x_g_c = 0, seed_num=None):
+    if seed_num:
+        np.random.seed(seed_num)
     delta_t = 2*pi*hat_s_v/20
     print('delta t: ', delta_t)
     f_0 = 1.5

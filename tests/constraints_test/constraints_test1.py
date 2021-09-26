@@ -12,3 +12,7 @@ def g_c(x): #x can be a column vector or a matrix
 def beta_c():
     beta_c = np.array([[0.5], [0.3]])
     return beta_c
+
+def D_x_g_c(x): #x can be a column vector or a matrix
+
+    return None
