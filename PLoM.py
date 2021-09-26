@@ -426,7 +426,7 @@ class PLoM:
             self.logfile.write_msg(msg='PLoM.config_tasks: the following tasks is configured to run: {}.'.format('->'.join(self.cur_task_list)),msg_type='RUNNING',msg_level=0)
         
 
-    def RunAlgorithm(self, n_mc = 5, epsilon_pca = 1e-6, epsilon_kde = 25, tol_PCA2 = 1e-5, tol = 1e-6, max_iter = 50, plot_tag = False, runDiffMaps = True):
+    def RunAlgorithm(self, n_mc = 5, epsilon_pca = 1e-6, epsilon_kde = 25, tol_PCA2 = 1e-5, tol = 1e-6, max_iter = 50, plot_tag = False, runDiffMaps = True, seed_num=None):
         """
         Running the PLoM algorithm to train the model and generate new realizations
         - n_mc: realization/sample size ratio
@@ -496,7 +496,7 @@ class PLoM:
             elif cur_task.task_name == 'ISDEGeneration':
                 self.__getattribute__('task_'+cur_task.task_name).avail_var_list = []
                 #ISDE generation
-                self.ISDEGeneration(n_mc = n_mc, tol_PCA2 = tol_PCA2, tol = tol, max_iter = max_iter)
+                self.ISDEGeneration(n_mc = n_mc, tol_PCA2 = tol_PCA2, tol = tol, max_iter = max_iter, seed_num=seed_num)
                 self.logfile.write_msg(msg='PLoM.RunAlgorithm: Realizations generated.',msg_type='RUNNING',msg_level=0)
                 self.dbserver.add_item(item_name = 'X_new', col_names = list(self.X0.columns), item = self.Xnew.T, data_shape=self.Xnew.shape)
                 self.logfile.write_msg(msg='PLoM.RunAlgorithm: X_new saved.',msg_type='RUNNING',msg_level=0)
@@ -589,10 +589,12 @@ class PLoM:
         return g, m, a, Z
 
 
-    def ISDEGeneration(self, n_mc = 5, tol_PCA2 = 1e-5, tol = 1e-6, max_iter = 50):
+    def ISDEGeneration(self, n_mc = 5, tol_PCA2 = 1e-5, tol = 1e-6, max_iter = 50, seed_num=None):
         """
         The construction of a nonlinear Ito Stochastic Differential Equation (ISDE) to generate realizations of random variable H
         """
+        if seed_num:
+            np.random.seed(seed_num)
         #constraints
         if self.g_c:
 
@@ -646,7 +648,7 @@ class PLoM:
             Hnewvalues, nu_lambda, x_, x_2 = plom.generator(self.Z, self.Y, self.a,\
                                         n_mc, self.x_mean, self.H, self.s_v,\
                                         self.hat_s_v, self.mu, self.phi,\
-                                        self.g[:,0:self.m]) #solve the ISDE in n_mc iterations
+                                        self.g[:,0:self.m],seed_num=seed_num) #solve the ISDE in n_mc iterations
             self.logfile.write_msg(msg='PLoM.ISDEGeneration: new generations are simulated.',msg_type='RUNNING',msg_level=0)
             self.dbserver.add_item(item_name = 'Errors', item = np.array([0]))
 
