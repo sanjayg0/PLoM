@@ -13,4 +13,6 @@ Python packages can also be specified to run only a subset of tests. Please also
 pytest tests/test_general.py
 
 pytest tests/test_PLoM.py
+
+pytest tests/test_PLoM_library.py
 ```
