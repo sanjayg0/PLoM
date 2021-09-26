@@ -11,3 +11,6 @@ __pycache__/*
 
 #logfile
 *.log
+
+#RunDir
+RunDir/*
