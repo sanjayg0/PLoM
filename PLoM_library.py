@@ -13,6 +13,11 @@ c_lib.rho.restype = c_double
 c_lib.rho.argtypes = [np.ctypeslib.ndpointer(dtype=np.float64),
                         np.ctypeslib.ndpointer(dtype=np.float64),c_int,c_int,c_double,c_double]
 
+c_lib.gradient_rho.restype = np.ctypeslib.ndpointer(dtype=np.float64)
+c_lib.gradient_rho.argtypes = [np.ctypeslib.ndpointer(dtype=np.float64),
+                               np.ctypeslib.ndpointer(dtype=np.float64),
+                               np.ctypeslib.ndpointer(dtype=np.float64),
+                               c_int,c_int,c_double,c_double]
 
 def rhoctypes(y, eta, nu, N, s_v, hat_s_v):
     return c_lib.rho(np.array(y,np.float64),np.array(eta,np.float64),nu,N,s_v,hat_s_v)
@@ -33,10 +38,10 @@ def scaling(x):
     return x_scaled, alpha, x_min
 
 def gradient_rhoctypes(gradient, y, eta, nu, N, s_v, hat_s_v):
-    return c_lib.gradient_rho(gradient.ctypes.data_as(c_void_p),\
-                                     y.ctypes.data_as(c_void_p),\
-                                   eta.ctypes.data_as(c_void_p),\
-                                   c_int(nu), c_int(N), c_double(s_v), c_double(hat_s_v))
+    return c_lib.gradient_rho(np.array(gradient,np.float64),\
+                              np.array(y,np.float64),\
+                              np.array(eta,np.float64),\
+                              nu, N, s_v, hat_s_v)
 
 def kernel(x, y, epsilon):
     """
@@ -322,7 +327,6 @@ def L(y, g_c, x_mean, eta, s_v, hat_s_v, mu, phi, psi, lambda_i, D_x_g_c): #grad
             array_pointer = cast(gradient_rhoctypes(np.zeros((nu,1)),yl,\
                 np.resize(np.transpose(eta),(nu*N,1)), nu, N, s_v, hat_s_v), POINTER(c_double*nu))
             gradient_rho = np.frombuffer(array_pointer.contents)
-                #np.resize(gradient_expo(yl)/expo(yl),(nu))\
             #KZ L[:,l] = np.resize(1e250*gradient_rho/rho_,(nu))\
             #        -np.resize(np.diag(mu).dot(np.transpose(phi)).\
             #                dot(D_x_g_c(x_mean+np.resize(phi.dot(np.diag(mu)).dot(yl), (x_mean.shape)))).\
