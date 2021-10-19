@@ -599,17 +599,21 @@ class PLoM:
         if self.g_c:
 
             self.C_h_hat_eta = plom.covariance(self.g_c(self.x_mean+(self.phi).dot(np.diag(self.mu)).dot(self.H)))
-            self.b_c, self.psi = plom.PCA2(self.C_h_hat_eta, self.beta_c, tol_PCA2)
+            beta_c_aux = np.zeros(self.beta_c.shape)
+            for i in range(0,self.beta_c.shape[0]):
+                beta_c_aux[i] = (self.beta_c[i] -self.x_min[i])/self.alpha[i]
+            self.beta_c_normalized = beta_c_aux
+            self.b_c, self.psi = plom.PCA2(self.C_h_hat_eta, self.beta_c_normalized, tol_PCA2)
             self.nu_c = len(self.b_c)
 
 
             self.hessian = plom.hessian_gamma(self.H, self.psi, self.g_c, self.phi, self.mu, self.x_mean)
             self.inverse = plom.solve_inverse(self.hessian)
-
-            self.lambda_i = -(self.inverse)\
-            .dot(plom.gradient_gamma(self.b_c, self.H, self.g_c, self.phi, self.mu, self.psi, self.x_mean))
-
+            
             self.gradient = plom.gradient_gamma(self.b_c, self.H, self.g_c, self.phi, self.mu, self.psi, self.x_mean)
+
+            self.lambda_i = -(self.inverse).dot(self.gradient)
+
             self.errors = [plom.err(self.gradient, self.b_c)]
             iteration = 0
             nu_init = np.random.normal(size=(self.nu,self.N))

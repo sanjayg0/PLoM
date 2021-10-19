@@ -8,7 +8,15 @@ import time
 from ctypes import *
 import os
 from general import Logfile, DBServer
-c_lib = CDLL(os.path.join(os.path.dirname(os.path.abspath(__file__)),"PLoM_C_library.so"))
+
+from sys import platform
+if platform == "linux" or platform == "linux2":
+    c_lib = CDLL(os.path.join(os.path.dirname(os.path.abspath(__file__)),"lib/linux/PLoM_C_library.so"))
+elif platform == "darwin":
+    c_lib = CDLL(os.path.join(os.path.dirname(os.path.abspath(__file__)),"lib/macOS/PLoM_C_library.so"))
+elif platform == "win32":
+    c_lib = CDLL(os.path.join(os.path.dirname(os.path.abspath(__file__)),"lib/win/PLoM_C_library.so"))
+
 c_lib.rho.restype = c_double
 c_lib.rho.argtypes = [np.ctypeslib.ndpointer(dtype=np.float64),
                         np.ctypeslib.ndpointer(dtype=np.float64),c_int,c_int,c_double,c_double]
@@ -91,14 +99,6 @@ def g(K, b):
     sqrt_norm = np.sqrt(1/norm)
     g = np.multiply(g, sqrt_norm)
     return g, eigenvalues
-
-#def D_x_g_c(x):
-    #depend on g(x)
-#    D = np.zeros((x.shape[0],2))
-#    D[0,0] = 1
-#    D[0,1] = 2*x[0,0]
-    # D[0,1] = 2*x[0,0]
-#    return D#np.array([[1, 2*x[0,0]],[0, 0]])
 
 def m(eigenvalues):
     """
@@ -297,7 +297,6 @@ def L(y, g_c, x_mean, eta, s_v, hat_s_v, mu, phi, psi, lambda_i, D_x_g_c): #grad
     N = eta.shape[1]
     L = np.zeros((nu,N))
     for l in range(0,N):
-
         yl = np.resize(y[:,l],(len(y[:,l]),1))
         rho_ = rhoctypes(yl, np.resize(np.transpose(eta),(nu*N,1)),\
                  nu, N, s_v, hat_s_v)
@@ -309,7 +308,6 @@ def L(y, g_c, x_mean, eta, s_v, hat_s_v, mu, phi, psi, lambda_i, D_x_g_c): #grad
             # not constraints and no D_x_g_c
             grad_g_c = np.zeros((x_mean.shape[0],1))
         if rho_ < 1e-250:
-            #print(rho_)
             closest = 1e30
             for i in range(0,N):
                 if closest > np.linalg.norm((hat_s_v/s_v)*np.resize(eta[:,i],yl.shape)-yl):
