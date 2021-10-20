@@ -153,6 +153,7 @@ def PCA(x, tol):
     x_mean = mean(x)
     (phi,mu,v) = np.linalg.svd(x-x_mean)
     mu = mu/sqrt(len(x[0])-1)
+    plt.figure()
     plt.plot(np.arange(len(mu)), mu)
     plt.xlabel('# eigenvalue of X covariance')
     plt.show()
@@ -168,6 +169,7 @@ def PCA(x, tol):
         error = error -  (mu[i]**2)/sum((mu**2))
         i = i+1
         errors.append(error)
+    plt.figure()
     plt.semilogy(np.arange(len(mu)+1), errors)
     plt.xlabel('# eigenvalue of Covariance matrix of X')
     plt.ylabel('Error of the PCA associated with the eigenvalue')
