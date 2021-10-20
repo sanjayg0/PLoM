@@ -23,6 +23,8 @@ class PLoM:
         # initialize constraints
         self.constraints = {}
         self.num_constraints = 0
+        #
+        self.runDiffMaps = runDiffMaps
         # initialize input data
         if self.initialize_data(data, separator, col_header):
             self.logfile.write_msg(msg='PLoM: data loading failed.',msg_type='ERROR',msg_level=0)
@@ -42,7 +44,7 @@ class PLoM:
         if run_tag:
             self.logfile.write_msg(msg='PLoM: Running all steps to generate new samples.',msg_type='RUNNING',msg_level=0)
             self.ConfigTasks()
-            self.RunAlgorithm(n_mc = num_rlz, epsilon_pca = tol_pca, epsilon_kde = epsilon_kde, tol_PCA2 = tol_PCA2, tol = tol, max_iter = max_iter, plot_tag = plot_tag, runDiffMaps = runDiffMaps)
+            self.RunAlgorithm(n_mc = num_rlz, epsilon_pca = tol_pca, epsilon_kde = epsilon_kde, tol_PCA2 = tol_PCA2, tol = tol, max_iter = max_iter, plot_tag = plot_tag, runDiffMaps = self.runDiffMaps)
         else:
             self.logfile.write_msg(msg='PLoM: using ConfigTasks(task_list = FULL_TASK_LIST) to schedule a run.',msg_type='RUNNING',msg_level=0)
             self.logfile.write_msg(msg='PLoM: using RunAlgorithm(n_mc=n_mc,epsilon_pca=epsilon_pca,epsilon_kde) to run simulations.',msg_type='RUNNING',msg_level=0)
@@ -86,6 +88,7 @@ class PLoM:
             self.g_c = None
             self.D_x_g_c = None
             self.beta_c = []
+            self.beta_c_aux = None
             self.lambda_i = 0
             self.psi = 0
             self.logfile.write_msg(msg='PLoM.add_constraints: no user-defined constraint - please use add_constraints(constraints_file=X) to add new constraints if any.',msg_type='WARNING',msg_level=0)
@@ -106,12 +109,14 @@ class PLoM:
                 'filename': constraints_file,
                 'g_c': new_constraints.g_c,
                 'D_x_g_c': new_constraints.D_x_g_c,
-                'beta_c': new_constraints.beta_c()
+                'beta_c': new_constraints.beta_c(),
+                'beta_c_aux': new_constraints.beta_c_aux
             }
         })
         self.g_c = new_constraints.g_c
         self.D_x_g_c = new_constraints.D_x_g_c
         self.beta_c = new_constraints.beta_c()
+        self.beta_c_aux = new_constraints.beta_c_aux
         self.logfile.write_msg(msg='PLoM.add_constraints: constraints added.',msg_type='RUNNING',msg_level=0)
         self.dbserver.add_item(item=[constraints_file],data_type='ConstraintsFile')
         return 0
@@ -129,6 +134,7 @@ class PLoM:
             self.g_c = self.constraints.get('Constraint'+str(constraint_tag)).get('g_c')
             self.D_x_g_c = self.constraints.get('Constraint'+str(constraint_tag)).get('D_x_g_c')
             self.beta_c = self.constraints.get('Constraint'+str(constraint_tag)).get('beta_c')
+            self.beta_c_aux = self.constraints.get('Constraint'+str(constraint_tag)).get('beta_c_aux')
             self.dbserver.add_item(item=[self.constraints.get('Constraint'+str(constraint_tag)).get('filename')],data_type='ConstraintsFile')
         except:
             self.logfile.write_msg(msg='PLoM.get_constraints: cannot get constraints',msg_type='ERROR',msg_level=0)
@@ -426,7 +432,7 @@ class PLoM:
             self.logfile.write_msg(msg='PLoM.config_tasks: the following tasks is configured to run: {}.'.format('->'.join(self.cur_task_list)),msg_type='RUNNING',msg_level=0)
         
 
-    def RunAlgorithm(self, n_mc = 5, epsilon_pca = 1e-6, epsilon_kde = 25, tol_PCA2 = 1e-5, tol = 1e-6, max_iter = 50, plot_tag = False, runDiffMaps = True, seed_num=None):
+    def RunAlgorithm(self, n_mc = 5, epsilon_pca = 1e-6, epsilon_kde = 25, tol_PCA2 = 1e-5, tol = 1e-6, max_iter = 50, plot_tag = False, runDiffMaps = None, seed_num=None):
         """
         Running the PLoM algorithm to train the model and generate new realizations
         - n_mc: realization/sample size ratio
@@ -435,6 +441,10 @@ class PLoM:
         - tol: tolerance in the PLoM iterations
         - max_iter: maximum number of iterations of the PLoM algorithm
         """
+        if runDiffMaps == None:
+            runDiffMaps = self.runDiffMaps
+        else:
+            self.runDiffMaps = runDiffMaps
 
         if plot_tag:
             self.plot_tag = plot_tag
@@ -589,7 +599,7 @@ class PLoM:
         return g, m, a, Z
 
 
-    def ISDEGeneration(self, n_mc = 5, tol_PCA2 = 1e-5, tol = 1e-6, max_iter = 50, seed_num=None):
+    def ISDEGeneration(self, n_mc = 5, tol_PCA2 = 1e-5, tol = 1e-3, max_iter = 50, seed_num=None):
         """
         The construction of a nonlinear Ito Stochastic Differential Equation (ISDE) to generate realizations of random variable H
         """
@@ -599,10 +609,9 @@ class PLoM:
         if self.g_c:
 
             self.C_h_hat_eta = plom.covariance(self.g_c(self.x_mean+(self.phi).dot(np.diag(self.mu)).dot(self.H)))
-            beta_c_aux = np.zeros(self.beta_c.shape)
-            for i in range(0,self.beta_c.shape[0]):
-                beta_c_aux[i] = (self.beta_c[i] -self.x_min[i])/self.alpha[i]
-            self.beta_c_normalized = beta_c_aux
+            
+            #scaling beta
+            self.beta_c_normalized = self.beta_c_aux(self.beta_c, self.x_min, self.alpha)
             self.b_c, self.psi = plom.PCA2(self.C_h_hat_eta, self.beta_c_normalized, tol_PCA2)
             self.nu_c = len(self.b_c)
 
