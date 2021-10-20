@@ -22,7 +22,7 @@
   [pytest](https://docs.pytest.org/en/6.2.x/getting-started.html) |  >= 6.2.5
   [hdf5](https://www.hdfgroup.org/solutions/hdf5/) | 
 
-To install the hdf5, users plesae download the [pre-built distributions](https://www.hdfgroup.org/downloads/hdf5), and macOS users could also install it by:
+To install the hdf5, users please download the [pre-built distributions](https://www.hdfgroup.org/downloads/hdf5); macOS homebrew users can also install via:
 ```shell
 brew install hdf5
 ```
