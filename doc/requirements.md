@@ -5,7 +5,8 @@
 * numpy and scipy - Scientific computing with Python
 * pandas and tables - Input and output text data files, storing and managing data
 * matplotlib - Visualization
-* pytest: - Testing
+* pytest - Testing
+* hdf5 - Database server
 
 ### Required versions
 
@@ -19,8 +20,19 @@
   [tables](https://www.pytables.org/usersguide/installation.html)       |  >= 3.6.1
   [matplotlib](https://matplotlib.org/stable/users/installing.html)   |  >= 3.4.2
   [pytest](https://docs.pytest.org/en/6.2.x/getting-started.html) |  >= 6.2.5
+  [hdf5](https://www.hdfgroup.org/solutions/hdf5/) | 
 
-See [requirements.txt](../requirements.txt) for a complete list of Python dependencies. For first-time users, please run the following command 
+To install the hdf5, users plesae download the [pre-built distributions](https://www.hdfgroup.org/downloads/hdf5), and macOS users could also install it by:
+```shell
+brew install hdf5
+```
+
+To install tables for python3.9 on macOS, please first install the c-blosc:
+```shell
+brew install c-blosc
+```
+
+Once the hdf5 (and c-blosc if needed) installed, please see [requirements.txt](../requirements.txt) for a complete list of Python dependencies. For first-time users, please run the following command 
 from the **PLoM** root to install the dependencies:
 
 ```shell
