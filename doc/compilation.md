@@ -17,6 +17,6 @@ gcc -fPIC -O2 -c PLoM_C_library.c
 gcc PLoM_C_library.o -shared -o PLoM_C_library.so
 ```
 
-Moreover, the pre-built dynamic library for three platforms are also archieved in the lib folder from which users could copy the .so library to the main root directory.
+Pre-built dynamic libraries for three platforms are also archieved in the lib folder; for macOS this is available for M1 machines and thus depending on machine architecture it may be required to run python install.py.
 
 Note: please refer to the [official page](https://gcc.gnu.org/install/binaries.html) for installing **gcc** compiler if needed.
