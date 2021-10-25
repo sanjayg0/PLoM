@@ -599,7 +599,7 @@ class PLoM:
         return g, m, a, Z
 
 
-    def ISDEGeneration(self, n_mc = 5, tol_PCA2 = 1e-5, tol = 1e-3, max_iter = 50, seed_num=None):
+    def ISDEGeneration(self, n_mc = 5, tol_PCA2 = 1e-5, tol = 0.02, max_iter = 50, seed_num=None):
         """
         The construction of a nonlinear Ito Stochastic Differential Equation (ISDE) to generate realizations of random variable H
         """
@@ -628,7 +628,10 @@ class PLoM:
             nu_init = np.random.normal(size=(self.nu,self.N))
             self.Y = nu_init.dot(self.a)
 
-            while (iteration < max_iter and self.errors[iteration] > tol):
+            error_ratio = 0
+            increasing_iterations = 0
+            
+            while (iteration < max_iter and self.errors[iteration] > tol*self.errors[0] and (increasing_iterations < 3)):
                 self.logfile.write_msg(msg='PLoM.ISDEGeneration: running iteration {}.'.format(iteration+1),msg_type='RUNNING',msg_level=0)
                 Hnewvalues, nu_lambda, x_, x_2 = plom.generator(self.Z, self.Y, self.a,\
                                             n_mc, self.x_mean, self.H, self.s_v,\
@@ -639,7 +642,7 @@ class PLoM:
                 self.gradient = plom.gradient_gamma(self.b_c, Hnewvalues, self.g_c, self.phi, self.mu, self.psi, self.x_mean)
                 self.hessian = plom.hessian_gamma(Hnewvalues, self.psi, self.g_c, self.phi, self.mu, self.x_mean)
                 self.inverse = plom.solve_inverse(self.hessian)
-
+ 
                 self.lambda_i = self.lambda_i - 0.3*(self.inverse).dot(self.gradient)
 
                 self.Z = Hnewvalues[:,-self.N:].dot(self.a)
@@ -647,7 +650,14 @@ class PLoM:
                 iteration += 1
 
                 (self.errors).append(plom.err(self.gradient, self.b_c))
-            
+                    
+                if (error_ratio > 1.00):
+                    increasing_iterations +=1
+                else:
+                    increasing_iterations = 0 
+                    
+                print('local min: ', local_minima_counter)
+                print('error ratio: ', error_ratio)
             #saving data
             self.dbserver.add_item(item_name = 'Errors', item = np.array(self.errors), data_shape=np.array(self.errors).shape)
 
