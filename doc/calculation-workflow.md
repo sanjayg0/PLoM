@@ -4,8 +4,8 @@ The algorithm can be divided into four major steps in sequence: **Data Normaliza
 **Principle Component Analysis**, **Kernerl Density Estimation**, and **ISDE Generation of the Random Variable**.
 
 ### Data Normalization
-The initial sampleXrtypically has wide ranges of values given different quantities of interest. 
-Hence,the standard scaling is conducted so that the resulting sample data **X<sub>r</sub>** are in the range of [0,1]:
+The initial sample **X<sub>r</sub>** typically has wide ranges of values given different quantities of interest. 
+Hence, the standard scaling is conducted so that the resulting sample data **X** are in the range of [0,1]:
 
 <img src="https://render.githubusercontent.com/render/math?math=[X]_{ij}=\frac{[X_r]_{ij}-min_k[X_r]_{ik}}{max_k[X_r]_{ik}-min_k[X_r]_{ik}}">
 
