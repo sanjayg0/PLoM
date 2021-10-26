@@ -20,7 +20,7 @@ import pandas as pd
 from ctypes import *
 import matplotlib.pyplot as plt
 import sys
-
+plt.ion()
 
 # ### Import PLoM modules
 
