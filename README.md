@@ -13,9 +13,9 @@ The **PLoM** is an open source python package that implements the algorithm of *
 * [Compilation](doc/compilation.md)
 ### Examples
 * [Example 0: Simple example in 20 dimensions](example/example0/ExampleScript_20D.ipynb)
-* [Example 0 (with constraints): Simple example in 2 dimensions](example/example0_constraints/ExampleScript_2D.ipynb)
-* [Example 1: Surrogating MSA of a 12-story RC frame](example/example1/ExampleScript_FullMSA.ipynb)
-* [Example 2: Surrogating IDA of a 12-story RC frame](example/example2/ExampleScript_IDA.ipynb)
-* [Example 3: Application in damage and loss assessment](example/example3/ExampleScript_DL.ipynb)
+* [Example 1: Simple example in 2 dimensions with constraints](example/example1/ExampleScript_2D.ipynb)
+* [Example 2: Surrogating MSA of a 12-story RC frame](example/example2/ExampleScript_FullMSA.ipynb)
+* [Example 3: Surrogating IDA of a 12-story RC frame](example/example3/ExampleScript_IDA.ipynb)
+* [Example 4: Application in damage and loss assessment](example/example4/ExampleScript_DL.ipynb)
 
 ## Acknowledgement
