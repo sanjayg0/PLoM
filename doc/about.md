@@ -6,3 +6,7 @@ for ***generating realizations of a random vector in a finite Euclidean space th
 The package mainly consists of python modules and invokes a dynamic library for more efficiently computing the gradient of potential, 
 and can be imported and run on Linux, macOS, and Windows platform. This repository also archives the unit/integration tests and 
 examples of applying the algorithm to practical engineering problems.
+
+To cite the software, please cite as
+
+Zhong, K., Gual, J., and Govindjee, S., PLoM python package v1.0, https://github.com/sanjayg0/PLoM (2021).
