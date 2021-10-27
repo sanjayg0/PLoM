@@ -57,6 +57,6 @@ estimate as an invariant measure.
 
 ### Diffusion map basis ###
 The last step in the algorithm is to employ a (non linear) diffusion map basis to identify the potentially nonlinear manifold upon
-which the data line.  This allows for a further dimensional reduction and the ISDE is projected into this space before solving it.
+which the data live.  This allows for a further dimensional reduction and the ISDE is projected into this space before solving it.
 The samples generated from its solution are then transformed back to the original dimension of the data.
 
