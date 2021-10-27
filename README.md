@@ -23,7 +23,4 @@ library for more efficiently computing the gradient of the potential, and can be
 * [Example 4: Application in damage and loss assessment](example/example4/ExampleScript_DL.ipynb)
 
 ## Acknowledgement
-This software developed under support by the National Science Foundation under Grant
-Nos. 1612843 and 2131111. Any opinions, findings, and conclusions or recommendations expressed in this
-material are those of the authors and do not necessarily reflect the views of the National Science
-Foundation or the Regents of the University of California.
+This software was developed under support by the National Science Foundation under Grant Nos. 1612843 and 2131111. Any opinions, findings, and conclusions or recommendations expressed in this material are those of the authors and do not necessarily reflect the views of the National Science Foundation or the Regents of the University of California.
