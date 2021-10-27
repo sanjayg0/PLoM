@@ -16,6 +16,8 @@ import os
 import inspect
 import pandas as pd
 import shutil
+import matplotlib.pyplot as plt
+plt.ion()
 # Importing all in the general module
 from PLoM import *
 # Current directory
