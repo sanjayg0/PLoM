@@ -28,5 +28,5 @@ This software was developed under support by the National Science Foundation und
 ## How to cite
 Please cite as
 
-Gual, J., Zhong, K., and Govindjee, S., PLoM python package v1.0,
+Zhong, K., Gual, J., and Govindjee, S., PLoM python package v1.0,
 https://github.com/sanjayg0/PLoM (2021).
