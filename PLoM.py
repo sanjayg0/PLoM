@@ -104,21 +104,25 @@ class PLoM:
             self.logfile.write_msg(msg='PLoM.add_constraints: could not add constraints {}'.format(constraints_file),msg_type='ERROR',msg_level=0)
             return 1
         self.num_constraints = self.num_constraints+1
-        self.constraints.update({
-            'Constraint'+str(self.num_constraints): {
-                'filename': constraints_file,
-                'g_c': new_constraints.g_c,
-                'D_x_g_c': new_constraints.D_x_g_c,
-                'beta_c': new_constraints.beta_c(),
-                'beta_c_aux': new_constraints.beta_c_aux
-            }
-        })
-        self.g_c = new_constraints.g_c
-        self.D_x_g_c = new_constraints.D_x_g_c
-        self.beta_c = new_constraints.beta_c()
-        self.beta_c_aux = new_constraints.beta_c_aux
-        self.logfile.write_msg(msg='PLoM.add_constraints: constraints added.',msg_type='RUNNING',msg_level=0)
-        self.dbserver.add_item(item=[constraints_file],data_type='ConstraintsFile')
+        try:
+            self.constraints.update({
+                'Constraint'+str(self.num_constraints): {
+                    'filename': constraints_file,
+                    'g_c': new_constraints.g_c,
+                    'D_x_g_c': new_constraints.D_x_g_c,
+                    'beta_c': new_constraints.beta_c(),
+                    'beta_c_aux': new_constraints.beta_c_aux
+                }
+            })
+            self.g_c = new_constraints.g_c
+            self.D_x_g_c = new_constraints.D_x_g_c
+            self.beta_c = new_constraints.beta_c()
+            self.beta_c_aux = new_constraints.beta_c_aux
+            self.logfile.write_msg(msg='PLoM.add_constraints: constraints added.',msg_type='RUNNING',msg_level=0)
+            self.dbserver.add_item(item=[constraints_file],data_type='ConstraintsFile')
+        except:
+            self.logfile.write_msg(msg='PLoM.add_constraints: at least one attribute (i.e., g_c, D_x_gc, beta_c, or beta_c_aux) missing in {}'.format(constraints_file),msg_type='ERROR',msg_level=0)
+            return 1
         return 0
 
 
