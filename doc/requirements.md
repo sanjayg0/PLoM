@@ -22,7 +22,7 @@
   [pytest](https://docs.pytest.org/en/6.2.x/getting-started.html) |  >= 6.2.5
   [hdf5](https://www.hdfgroup.org/solutions/hdf5/) | 
 
-To install the hdf5, users please download the [pre-built distributions](https://www.hdfgroup.org/downloads/hdf5); macOS homebrew users can also install via:
+To install hdf5, users shoul download the [pre-built distributions](https://www.hdfgroup.org/downloads/hdf5); macOS homebrew users can also install via:
 ```shell
 brew install hdf5
 ```
@@ -32,7 +32,8 @@ To install tables for python3.9 on macOS, please first install the c-blosc:
 brew install c-blosc
 ```
 
-Once the hdf5 (and c-blosc if needed) installed, please see [requirements.txt](../requirements.txt) for a complete list of Python dependencies. For first-time users, please run the following command 
+Once hdf5 (and c-blosc if needed) are installed, please see [requirements.txt](../requirements.txt) for a complete list of Python
+dependencies. For first-time users, it is recommended to run the following command 
 from the **PLoM** root to install the dependencies:
 
 ```shell
