@@ -655,9 +655,7 @@ class PLoM:
                     increasing_iterations +=1
                 else:
                     increasing_iterations = 0 
-                    
-                print('local min: ', local_minima_counter)
-                print('error ratio: ', error_ratio)
+
             #saving data
             self.dbserver.add_item(item_name = 'Errors', item = np.array(self.errors), data_shape=np.array(self.errors).shape)
 
