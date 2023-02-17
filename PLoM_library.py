@@ -8,6 +8,8 @@ import time
 from ctypes import *
 import os
 from general import Logfile, DBServer
+from multiprocessing import Pool
+import defs
 
 from sys import platform
 if platform == "linux" or platform == "linux2":
@@ -67,19 +69,16 @@ def K(eta, epsilon):
            [1., 1.]]), array([[2., 0.],
            [0., 2.]]))
     """
+    # use parallel process for KDE
+    # variable number of works
+    import multiprocessing
+    num_cpu = multiprocessing.cpu_count()
+    pool = Pool(num_cpu)
     N = eta.shape[1]
-    K = np.zeros((N,N))
-    b = np.zeros((N,N))
-    for i in range(0,N):
-        row_sum = 0
-        for j in range(0,N):
-            if j != i:
-                K[i,j] = kernel((eta[:,i]),((eta[:,j])), epsilon)
-                row_sum = row_sum + K[i,j]
-            else:
-                K[i,j] = 1
-                row_sum = row_sum + 1
-        b[i,i] = row_sum
+    # use functions in defs.py
+    results = pool.map(defs.splat_f, ((i, j, eta, epsilon) for i in range(N) for j in range(N)))
+    K = np.array(results).reshape(N, N)
+    b = np.diag(np.sum(K,1))
     return K, b
 
 def g(K, b):
@@ -100,15 +99,16 @@ def g(K, b):
     g = np.multiply(g, sqrt_norm)
     return g, eigenvalues
 
-def m(eigenvalues):
+def m(eigenvalues, beta=0.1):
     """
     >>> m(np.array([1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.05, 0.025]))
     11
     """
     i = 2
     m = 0
+    print('beta = {}'.format(beta))
     while i < len(eigenvalues) and m == 0:
-        if eigenvalues[i] <= eigenvalues[1]*0.1:
+        if eigenvalues[i] <= eigenvalues[1]*beta:
             return i+1
         i = i+1
     if m == 0:
@@ -153,10 +153,10 @@ def PCA(x, tol):
     x_mean = mean(x)
     (phi,mu,v) = np.linalg.svd(x-x_mean)
     mu = mu/sqrt(len(x[0])-1)
-    plt.figure()
-    plt.plot(np.arange(len(mu)), mu)
-    plt.xlabel('# eigenvalue of X covariance')
-    plt.show()
+    #plt.figure()
+    #plt.plot(np.arange(len(mu)), mu)
+    #plt.xlabel('# eigenvalue of X covariance')
+    #plt.show()
     error = 1
     i = 0
     errors = [1]
@@ -169,11 +169,11 @@ def PCA(x, tol):
         error = error -  (mu[i]**2)/sum((mu**2))
         i = i+1
         errors.append(error)
-    plt.figure()
-    plt.semilogy(np.arange(len(mu)+1), errors)
-    plt.xlabel('# eigenvalue of Covariance matrix of X')
-    plt.ylabel('Error of the PCA associated with the eigenvalue')
-    plt.show()
+    #plt.figure()
+    #plt.semilogy(np.arange(len(mu)+1), errors)
+    #plt.xlabel('# eigenvalue of Covariance matrix of X')
+    #plt.ylabel('Error of the PCA associated with the eigenvalue')
+    #plt.show()
     mu = mu[0:nu]
     phi = phi[:,0:nu]
     mu_sqrt_inv = (np.diag(1/(mu))) #no need to do the sqrt because we use the singularvalues
@@ -252,7 +252,7 @@ def generator(z_init, y_init, a, n_mc, x_mean, eta, s_v, hat_s_v, mu, phi, g, ps
     if seed_num:
         np.random.seed(seed_num)
     delta_t = 2*pi*hat_s_v/20
-    print('delta t: ', delta_t)
+    #print('delta t: ', delta_t)
     f_0 = 1.5
     l_0 = 10#200
     M_0 = 10#20
@@ -298,42 +298,51 @@ def L(y, g_c, x_mean, eta, s_v, hat_s_v, mu, phi, psi, lambda_i, D_x_g_c): #grad
     nu = eta.shape[0]
     N = eta.shape[1]
     L = np.zeros((nu,N))
-    for l in range(0,N):
-        yl = np.resize(y[:,l],(len(y[:,l]),1))
-        rho_ = rhoctypes(yl, np.resize(np.transpose(eta),(nu*N,1)),\
-                 nu, N, s_v, hat_s_v)
-        rho_ = 1e250*rho_
-        # compute the D_x_g_c if D_x_g_c is not 0 (KZ)
-        if D_x_g_c:
-            grad_g_c = D_x_g_c(x_mean+np.resize(phi.dot(np.diag(mu)).dot(yl), (x_mean.shape)))
-        else:
-            # not constraints and no D_x_g_c
-            grad_g_c = np.zeros((x_mean.shape[0],1))
-        if rho_ < 1e-250:
-            closest = 1e30
-            for i in range(0,N):
-                if closest > np.linalg.norm((hat_s_v/s_v)*np.resize(eta[:,i],yl.shape)-yl):
-                    closest = np.linalg.norm((hat_s_v/s_v)*np.resize(eta[:,i],yl.shape)-yl)
-                    vector = (hat_s_v/s_v)*np.resize(eta[:,i],yl.shape)-yl
-            #KZ L[:,l] = (  np.resize(vector/(hat_s_v**2),(nu))\
-            #    -np.resize(np.diag(mu).dot(np.transpose(phi)).\
-            #            dot(D_x_g_c(x_mean+np.resize(phi.dot(np.diag(mu)).dot(yl), (x_mean.shape)))).\
-            #            dot(psi).dot(lambda_i), (nu)))
-            L[:,l] = (  np.resize(vector/(hat_s_v**2),(nu))\
-                -np.resize(np.diag(mu).dot(np.transpose(phi)).\
-                        dot(grad_g_c).dot(psi).dot(lambda_i), (nu)))
 
-        else:
-            array_pointer = cast(gradient_rhoctypes(np.zeros((nu,1)),yl,\
-                np.resize(np.transpose(eta),(nu*N,1)), nu, N, s_v, hat_s_v), POINTER(c_double*nu))
-            gradient_rho = np.frombuffer(array_pointer.contents)
-            #KZ L[:,l] = np.resize(1e250*gradient_rho/rho_,(nu))\
-            #        -np.resize(np.diag(mu).dot(np.transpose(phi)).\
-            #                dot(D_x_g_c(x_mean+np.resize(phi.dot(np.diag(mu)).dot(yl), (x_mean.shape)))).\
-            #                    dot(psi).dot(lambda_i), (nu))
-            L[:,l] = np.resize(1e250*gradient_rho/rho_,(nu))\
+    if False:
+        for l in range(0,N):
+            yl = np.resize(y[:,l],(len(y[:,l]),1))
+            rho_ = rhoctypes(yl, np.resize(np.transpose(eta),(nu*N,1)),\
+                    nu, N, s_v, hat_s_v)
+            rho_ = 1e250*rho_
+            # compute the D_x_g_c if D_x_g_c is not 0 (KZ)
+            if D_x_g_c:
+                grad_g_c = D_x_g_c(x_mean+np.resize(phi.dot(np.diag(mu)).dot(yl), (x_mean.shape)))
+            else:
+                # not constraints and no D_x_g_c
+                grad_g_c = np.zeros((x_mean.shape[0],1))
+            if rho_ < 1e-250:
+                closest = np.inf
+                for i in range(0,N):
+                    if closest > np.linalg.norm((hat_s_v/s_v)*np.resize(eta[:,i],yl.shape)-yl):
+                        closest = np.linalg.norm((hat_s_v/s_v)*np.resize(eta[:,i],yl.shape)-yl)
+                        vector = (hat_s_v/s_v)*np.resize(eta[:,i],yl.shape)-yl
+                #KZ L[:,l] = (  np.resize(vector/(hat_s_v**2),(nu))\
+                #    -np.resize(np.diag(mu).dot(np.transpose(phi)).\
+                #            dot(D_x_g_c(x_mean+np.resize(phi.dot(np.diag(mu)).dot(yl), (x_mean.shape)))).\
+                #            dot(psi).dot(lambda_i), (nu)))
+                L[:,l] = (  np.resize(vector/(hat_s_v**2),(nu))\
                     -np.resize(np.diag(mu).dot(np.transpose(phi)).\
-                            dot(grad_g_c).dot(psi).dot(lambda_i), (nu))
+                            dot(grad_g_c).dot(psi).dot(lambda_i), (nu)))
+
+            else:
+                array_pointer = cast(gradient_rhoctypes(np.zeros((nu,1)),yl,\
+                    np.resize(np.transpose(eta),(nu*N,1)), nu, N, s_v, hat_s_v), POINTER(c_double*nu))
+                gradient_rho = np.frombuffer(array_pointer.contents)
+                #KZ L[:,l] = np.resize(1e250*gradient_rho/rho_,(nu))\
+                #        -np.resize(np.diag(mu).dot(np.transpose(phi)).\
+                #                dot(D_x_g_c(x_mean+np.resize(phi.dot(np.diag(mu)).dot(yl), (x_mean.shape)))).\
+                #                    dot(psi).dot(lambda_i), (nu))
+                L[:,l] = np.resize(1e250*gradient_rho/rho_,(nu))\
+                        -np.resize(np.diag(mu).dot(np.transpose(phi)).\
+                                dot(grad_g_c).dot(psi).dot(lambda_i), (nu))
+    if True:
+        import multiprocessing
+        num_cpu = multiprocessing.cpu_count()
+        pool = Pool(num_cpu)
+        results = pool.map(defs.splat_h, ((l, y, x_mean, eta, s_v, hat_s_v, mu, phi, psi, lambda_i, D_x_g_c, nu, N) for l in range(N)))
+        L = np.array(results).reshape(N,nu).transpose()
+        
     return L
 
 
