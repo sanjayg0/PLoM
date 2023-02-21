@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 #JGA
-#Edited by Peter Lee 2/21/2023
 from matplotlib import pyplot as plt
 import numpy as np
 from scipy import integrate
